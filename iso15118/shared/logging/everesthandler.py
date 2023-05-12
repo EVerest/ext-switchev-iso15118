@@ -22,4 +22,4 @@ class EverestHandler(Handler):
         elif log_level == WARNING:
             log.warning(msg)
         else:
-            log.debug(msg)
+            log.info(msg)
