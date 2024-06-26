@@ -109,6 +109,15 @@ class EVControllerInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def get_selected_auth_option(
+        self, protocol: Protocol
+    ) -> AuthEnum:
+        """
+        Gets the auth transfer mode requested for the current charging session.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def get_energy_transfer_mode(
         self, protocol: Protocol
     ) -> EnergyTransferModeEnum:
