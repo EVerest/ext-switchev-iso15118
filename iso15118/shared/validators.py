@@ -78,3 +78,31 @@ def one_field_must_be_set(
         )
 
     return True
+
+
+def one_field_must_be_set_or_none(field_options: List[str], values: dict) -> bool:
+    """
+    In several messages, there is the option to choose one of two or more
+    possible fields, where all fields are defined as optional in the
+    corresponding model but exactly one or none of them needs to be set.
+
+    Args:
+        field_options: List of optional field names and aliases of a model.
+                       For each field, we need both the field name and the alias
+                       because when instantiating a pydantic model, we use the
+                       pythonic field names, but when de-serialising the model
+                       through JSON via the EXI codec, we use the aliases.
+        values: The dict with the model's fields
+    """
+    field_values = [values.get(f"{field_name}") for field_name in field_options]
+    set_fields = [x for x in field_values if x is not None]
+
+    if len(set_fields) > 1:
+        raise ValueError(
+            f"Exactly one field must be set but {len(set_fields)} "
+            "are set instead. "
+            f"\nSet fields: {set_fields}"
+            f"\nField options: {field_options}"
+        )
+
+    return True

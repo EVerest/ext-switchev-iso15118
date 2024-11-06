@@ -44,7 +44,10 @@ from iso15118.shared.messages.iso15118_20.common_types import (
     V2GRequest,
     V2GResponse,
 )
-from iso15118.shared.validators import one_field_must_be_set
+from iso15118.shared.validators import (
+    one_field_must_be_set,
+    one_field_must_be_set_or_none,
+)
 
 
 class ECDHCurve(str, Enum):
@@ -713,16 +716,15 @@ class ChargingSchedule(BaseModel):
     @root_validator(pre=True)
     def either_price_levels_or_absolute_prices(cls, values):
         """
-        Either price_level_schedule or absolute_price_schedule must be set,
+        Either price_level_schedule, absolute_price_schedule or none must be set,
         depending on whether abstract price levels or absolute prices are used
         to indicate costs for the charging session.
-
         Pydantic validators are "class methods",
         see https://pydantic-docs.helpmanual.io/usage/validators/
         """
         # pylint: disable=no-self-argument
         # pylint: disable=no-self-use
-        if one_field_must_be_set(
+        if one_field_must_be_set_or_none(
             [
                 "price_level_schedule",
                 "PriceLevelSchedule",
@@ -730,7 +732,6 @@ class ChargingSchedule(BaseModel):
                 "AbsolutePriceSchedule",
             ],
             values,
-            True,
         ):
             return values
 
@@ -750,16 +751,15 @@ class DischargingSchedule(BaseModel):
     @root_validator(pre=True)
     def either_price_levels_or_absolute_prices(cls, values):
         """
-        Either price_level_schedule or absolute_price_schedule must be set,
-        depending on abstract price levels or absolute prices are used to
-        indicate costs for the charging session.
-
+        Either price_level_schedule, absolute_price_schedule or none must be set,
+        depending on whether abstract price levels or absolute prices are used
+        to indicate costs for the charging session.
         Pydantic validators are "class methods",
         see https://pydantic-docs.helpmanual.io/usage/validators/
         """
         # pylint: disable=no-self-argument
         # pylint: disable=no-self-use
-        if one_field_must_be_set(
+        if one_field_must_be_set_or_none(
             [
                 "price_level_schedule",
                 "PriceLevelSchedule",
@@ -767,7 +767,6 @@ class DischargingSchedule(BaseModel):
                 "AbsolutePriceSchedule",
             ],
             values,
-            True,
         ):
             return values
 
