@@ -94,13 +94,8 @@ def one_field_must_be_set_or_none(field_options: List[str], values: dict) -> boo
                        through JSON via the EXI codec, we use the aliases.
         values: The dict with the model's fields
     """
-    set_fields: List = []
-    for field_name in field_options:
-        field = values.get(f"{field_name}")
-        # Important to not check for "if field" instead of "if field is not None" to
-        # avoid situations in which field evaluates to 0 (which equals to False)
-        if field is not None:
-            set_fields.append(field)
+    field_values = [values.get(f"{field_name}") for field_name in field_options]
+    set_fields = [x for x in field_values if x is not None]
 
     if len(set_fields) > 1:
         raise ValueError(
