@@ -196,9 +196,8 @@ class ServiceDiscovery(StateEVCC):
             self.stop_state_machine("ChargeService not offered")
             return
 
-        logger.warn("received auth options list %s" % service_discovery_res.auth_option_list.auth_options)
+        self.select_auth_mode(service_discovery_res.auth_option_list.auth_options)
         await self.select_services(service_discovery_res)
-        await self.select_auth_mode(service_discovery_res.auth_option_list.auth_options)
         await self.select_energy_transfer_mode()
 
         charge_service: ChargeService = service_discovery_res.charge_service
@@ -266,13 +265,12 @@ class ServiceDiscovery(StateEVCC):
             self.comm_session.selected_energy_mode.value.startswith("AC")
         )
 
-    async def select_auth_mode(self, auth_option_list: List[AuthEnum]):
+    def select_auth_mode(self, auth_option_list: List[AuthEnum]):
         """
         Check if an authorization mode (aka payment option in ISO 15118-2) was
         saved from a previously paused communication session and reuse for
         resumed session, otherwise request from EV controller.
         """
-        logger.warn("V2G_PAYMENT: in function received auth options list %s" % auth_option_list)
         if evcc_settings.ev_session_context.selected_auth_option:
             logger.debug(
                 "Reusing authorization option "
@@ -284,21 +282,6 @@ class ServiceDiscovery(StateEVCC):
             )
             evcc_settings.ev_session_context.selected_auth_option = None
         else:
-            logger.warn("V2G_PAYMENT: about to read value from state")
-            self.comm_session.selected_auth_option = (
-                await self.comm_session.ev_controller.get_selected_auth_option(
-                    Protocol.ISO_15118_2
-                )
-            )
-            logger.warn("V2G_PAYMENT: in function read value from state %s" % self.comm_session.selected_auth_option)
-            if self.comm_session.selected_auth_option is not None:
-                logger.debug(
-                        "V2G_PAYMENT: Found Payment Option %s passed in from the PyJoseV module, using it" % self.comm_session.selected_auth_option
-                )
-            else:
-                logger.debug(
-                        "V2G_PAYMENT: No previous paused session, no PaymentOption set, using TLS flag %s to decide auth method" % self.comm_session.is_tls
-                )
             # Choose Plug & Charge (pnc) or External Identification Means (eim)
             # as the selected authorization option. The car manufacturer might
             # have a mechanism to determine a user-defined or default
