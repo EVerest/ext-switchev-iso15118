@@ -248,12 +248,6 @@ class SimEVController(EVControllerInterface):
             logger.error(f"Invalid protocol '{protocol}', can't determine EVCCID")
             raise InvalidProtocolError
 
-    async def get_selected_auth_option(
-        self, protocol: Protocol
-    ) -> AuthEnum:
-        """Overrides EVControllerInterface.get_selected_auth_option()."""
-        return AuthEnum(EVEREST_EV_STATE.PaymentOption)
-
     async def get_energy_transfer_mode(
         self, protocol: Protocol
     ) -> EnergyTransferModeEnum:
