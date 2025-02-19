@@ -858,6 +858,9 @@ class ScheduleExchange(StateEVCC):
                         bpt_channel_selection = ChannelSelection.CHARGE
 
             await self.comm_session.ev_controller.enable_charging(True)
+
+            EVEREST_CTX.publish('AC_EVPowerReady', True)
+
             if self.comm_session.selected_charging_type_is_ac:
                 power_delivery_req = PowerDeliveryReq(
                     header=MessageHeader(
@@ -878,9 +881,6 @@ class ScheduleExchange(StateEVCC):
                     ISOV20PayloadTypes.MAINSTREAM,
                 )
             else:
-                
-                EVEREST_CTX.publish('AC_EVPowerReady', True)
-                
                 cable_check_req = DCCableCheckReq(
                     header=MessageHeader(
                         session_id=self.comm_session.session_id,
@@ -1285,6 +1285,9 @@ class ACChargeLoop(StateEVCC):
                 )
             if evse_notification == EVSENotification.SERVICE_RENEGOTIATION:
                 renegotiation = True
+            
+            EVEREST_CTX.publish('AC_StopFromCharger', None)
+
             self.stop_v20_charging(
                 next_state=PowerDelivery, renegotiate_requested=renegotiation
             )
