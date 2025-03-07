@@ -263,6 +263,7 @@ class EVCCCommunicationSession(V2GCommunicationSession):
         evcc_settings.ev_session_context.session_id = self.session_id
         evcc_settings.ev_session_context.selected_auth_option = self.selected_auth_option
         evcc_settings.ev_session_context.requested_energy_mode = self.selected_energy_mode
+        evcc_settings.ev_session_context.selected_energy_service = self.selected_energy_service
 
 class CommunicationSessionHandler:
     """
