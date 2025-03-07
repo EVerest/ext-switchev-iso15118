@@ -81,7 +81,7 @@ from iso15118.shared.messages.xmldsig import (
     Transform,
     Transforms,
 )
-from iso15118.shared.settings import enable_tls_1_3, get_PKI_PATH
+from iso15118.shared.settings import enabled_tls_1_3, get_PKI_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ def get_ssl_context(server_side: bool, ciphersuites: str = None) -> Optional[SSL
          as well as read the password.
     """
 
-    if enable_tls_1_3:
+    if enabled_tls_1_3:
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     else:
         # Specifying protocol as `PROTOCOL_TLS` does best effort.
@@ -164,7 +164,7 @@ def get_ssl_context(server_side: bool, ciphersuites: str = None) -> Optional[SSL
             logger.exception(exc)
             return None
 
-        if enable_tls_1_3:
+        if enabled_tls_1_3:
             # In 15118-20 we should also verify EVCC's certificate chain.
             # The spec however says TLS 1.3 should also support 15118-2
             # (Table 5 in V2G20 specification)
@@ -187,9 +187,7 @@ def get_ssl_context(server_side: bool, ciphersuites: str = None) -> Optional[SSL
         ssl_context.verify_mode = VerifyMode.CERT_REQUIRED
         ssl_context.set_ciphers(ciphersuites)
 
-        print(f"security enable_tls_1_3: {enable_tls_1_3}")
-
-        if enable_tls_1_3:
+        if enabled_tls_1_3:
             try:
                 ssl_context.load_cert_chain(
                     certfile=os.path.join(get_PKI_PATH(), CertPath.VEHICLE_CERT_CHAIN_PEM),

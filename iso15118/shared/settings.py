@@ -20,11 +20,11 @@ MESSAGE_LOG_EXI = False
 
 V20_EVSE_SERVICES_CONFIG = SHARED_CWD + "/examples/secc/15118_20/service_config.json"
 
-enable_tls_1_3 = False
+enabled_tls_1_3 = False
 
 def enable_tls_1_3() -> None:
-    global enable_tls_1_3
-    enable_tls_1_3 = True
+    global enabled_tls_1_3
+    enabled_tls_1_3 = True
 
 shared_settings = None
 
