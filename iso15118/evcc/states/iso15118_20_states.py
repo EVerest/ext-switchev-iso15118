@@ -1764,7 +1764,7 @@ class DCChargeLoop(StateEVCC):
                 renegotiation = True
             elif evse_notification == EVSENotification.PAUSE:
                 pause = True
-                # EVEREST_CTX.publish('pause_from_charger', None)
+                EVEREST_CTX.publish('pause_from_charger', None)
             else:
                 EVEREST_CTX.publish('AC_StopFromCharger', None)
 
