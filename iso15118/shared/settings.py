@@ -26,6 +26,9 @@ def enable_tls_1_3() -> None:
     global enabled_tls_1_3
     enabled_tls_1_3 = True
 
+def get_enabled_tls_1_3() -> bool:
+    return enabled_tls_1_3
+
 shared_settings = None
 
 ignoring_value_range = False
