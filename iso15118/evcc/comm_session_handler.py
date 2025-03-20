@@ -115,8 +115,8 @@ class EVCCCommunicationSession(V2GCommunicationSession):
         # A value >= 0 means the timer is running, a value < 0 means it stopped.
         self.ongoing_timer: float = -1
 
-        # The Charge timer (in seconds) starts running once the EVCC 
-        # receives a PowerDeliveryRes with EVSEProcessing set to 'Finished'.  
+        # The Charge timer (in seconds) starts running once the EVCC
+        # receives a PowerDeliveryRes with EVSEProcessing set to 'Finished'.
         # This timer counts up during a charge session, recording the duration.
         # When a charge session is paused or stopped, the timer is reset.
         # A value >= 0 means the timer is running, a value < 0 means it stopped.
