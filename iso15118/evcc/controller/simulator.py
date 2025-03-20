@@ -7,7 +7,6 @@ from iso15118.evcc.everest import context as EVEREST_CONTEXT, float2Value_Multip
 import logging
 import random
 from typing import List, Optional, Tuple, Union
-from time import time
 import os
 from pathlib import Path
 
@@ -134,8 +133,7 @@ from iso15118.shared.security import (
 from iso15118.evcc.states.power_curve import (
         LQRChargeCurve, 
         formatCurveData,
-        generate_new_schedule,
-        generate_dummy_schedule
+        generate_new_schedule
 )
 import paho.mqtt.publish as mqtt_publish
 import paho.mqtt.subscribe as mqtt_subscribe
