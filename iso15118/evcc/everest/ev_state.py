@@ -14,8 +14,8 @@ DEFAULT_TARGET_VOLTAGE_V = 200
 class EVState:
     # Common
     PaymentOption: str = ''
-    EAmount: int = 60 
-    DepartureTime: Optional[int] = None 
+    EAmount: int = 60
+    DepartureTime: Optional[int] = None
     EnergyTransferMode: str = ''
     StopCharging = False
     Pause = False

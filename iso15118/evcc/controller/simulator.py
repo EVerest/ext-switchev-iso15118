@@ -585,7 +585,7 @@ class SimEVController(EVControllerInterface):
         return schedule.sa_schedule_tuple_id
 
     async def process_sa_schedules_v2(
-        self, sa_schedules: List[SAScheduleTuple], time_elapsed 
+        self, sa_schedules: List[SAScheduleTuple], time_elapsed
     ) -> Tuple[ChargeProgressV2, int, ChargingProfile]:
         print("In ProcessSchedules")
         """Overrides EVControllerInterface.process_sa_schedules()."""
@@ -642,7 +642,7 @@ class SimEVController(EVControllerInterface):
             mqtt_publish.single("everest_external/nodered/{}/evcc/check_algorithm", "test", hostname="mqtt-server")
             msg = mqtt_subscribe.simple("everest_external/nodered/evcc/confirm_algorithm", hostname="mqtt-server")
             algorithm_choice = str(msg.payload)[2:-1] # convert bytestring
-            if(algorithm_choice == 'algorithm_one'):
+            if (algorithm_choice == 'algorithm_one'):
                 ks = 10
             else: # == algorithm_two
                 ks = 1
