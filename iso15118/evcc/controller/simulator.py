@@ -587,13 +587,11 @@ class SimEVController(EVControllerInterface):
     async def process_sa_schedules_v2(
         self, sa_schedules: List[SAScheduleTuple], time_elapsed
     ) -> Tuple[ChargeProgressV2, int, ChargingProfile]:
-        print("In ProcessSchedules")
         """Overrides EVControllerInterface.process_sa_schedules()."""
         secc_schedule = sa_schedules.pop()
         evcc_profile_entry_list: List[ProfileEntryDetails] = []
 
-        print(f"Processing SASchedules! ${sa_schedules}")
-        print(f"Processing SASchedules! ${time_elapsed}")
+        logger.debug(f"Processing SASchedules! ${sa_schedules} ${time_elapsed}")
         # The charging schedule coming from the SECC is called 'schedule', the
         # pendant coming from the EVCC (after having processed the offered
         # schedule(s)) is called 'profile'. Therefore, we use the prefix
@@ -621,17 +619,14 @@ class SimEVController(EVControllerInterface):
                 )
                 evcc_profile_entry_list.append(last_profile_entry_details)
 
-        print("Done processing schedules...")
         # Set Curve Variables...
-        print("About to handle pmax schedule %s" % secc_schedule.p_max_schedule.schedule_entries[0])
+        logger.debug("About to handle pmax schedule %s" % secc_schedule.p_max_schedule.schedule_entries[0])
         p_max = secc_schedule.p_max_schedule.schedule_entries[0].p_max
         pmax:float = p_max.value * pow(10, p_max.multiplier)
-        print(f"{pmax=}")
         departure_time = secc_schedule.p_max_schedule.schedule_entries[0].time_interval.duration
         new_schedule = evcc_profile_entry_list
-        print("Abt to generate Curve...", time_elapsed)
         if (time_elapsed  > departure_time):
-            print("End of Profile! Defaulting to EVCC profile enteries")
+            logger.debug("End of Profile! Defaulting to EVCC profile enteries")
         else:
             ks = 1
             # Check EAmount
@@ -647,13 +642,13 @@ class SimEVController(EVControllerInterface):
             else: # == algorithm_two
                 ks = 1
             power_draw_progress, power_draw, time_vector = LQRChargeCurve(departure_time, eamount, pmax, ks)
-            print(f"About to generate a new schedule with a EVCC_Profile {evcc_profile_entry_list}")
+            logger.debug(f"About to generate a new schedule with a EVCC_Profile {evcc_profile_entry_list}")
             new_schedule = generate_new_schedule(evcc_profile_entry_list, power_draw, time_vector, departure_time, time_elapsed)
-            print(f"New schedule of length {len(new_schedule)} created")
+            logger.debug(f"New schedule of length {len(new_schedule)} created")
 
             formatted_curve = formatCurveData(new_schedule)
             # Then Re-Publish the chosen curve as the final selection
-            print(f"About to publish {str(formatted_curve)=}")
+            logger.debug(f"About to publish {str(formatted_curve)=}")
             mqtt_publish.single("everest_external/nodered/{}/evcc/active_powercurve", str(formatted_curve), hostname="mqtt-server")
 
         # TODO If a SalesTariff is present and digitally signed (and TLS is used),
