@@ -788,7 +788,7 @@ class ChargeParameterDiscovery(StateEVCC):
         )
         ev_controller = self.comm_session.ev_controller
 
-        print('SAScheduleTuples are:', charge_params_res.sa_schedule_list.schedule_tuples)
+        logger.debug('SAScheduleTuples are:', charge_params_res.sa_schedule_list.schedule_tuples)
         if charge_params_res.evse_processing == EVSEProcessing.FINISHED:
             # Reset the Ongoing timer
             self.comm_session.ongoing_timer = -1
@@ -798,10 +798,10 @@ class ChargeParameterDiscovery(StateEVCC):
             mqtt_publish.single("everest_external/nodered/{}/evcc/check_sim_speed", "test", hostname="mqtt-server")
             sim_speed_msg  = mqtt_subscribe.simple("everest_external/nodered/evcc/confirm_sim_speed", hostname="mqtt-server")
             self.comm_session.sim_speed = int(str(sim_speed_msg.payload)[2:-1])
-            print("Sim speed is now ", self.comm_session.sim_speed)
-            print(time(), self.comm_session.charging_session_timer, self.comm_session.sim_speed)
+            logger.debug("Sim speed is now ", self.comm_session.sim_speed)
+            logger.debug(time(), self.comm_session.charging_session_timer, self.comm_session.sim_speed)
             time_elapsed = (time() - self.comm_session.charging_session_timer) * self.comm_session.sim_speed
-            print('Charging Session Time Elapsed... ', time_elapsed)
+            logger.debug('Charging Session Time Elapsed... ', time_elapsed)
 
             # TODO Look at EVSEStatus and EVSENotification and react accordingly
             #      if e.g. EVSENotification is set to STOP_CHARGING or if RCD
@@ -1197,13 +1197,12 @@ class ChargingStatus(StateEVCC):
             EVEREST_CTX.publish('AC_EVSEMaxCurrent', evse_max_current)
 
         time_elapsed = (time() - self.comm_session.charging_session_timer) * self.comm_session.sim_speed
-        print('End Of Schedule:: ', self.comm_session.end_of_profile_schedule)
-        print('NewClockValue:: ', time_elapsed)
-        print(self.comm_session.end_of_profile_schedule)
+        logger.debug('End Of Schedule:: ', self.comm_session.end_of_profile_schedule)
+        logger.debug('NewClockValue:: ', time_elapsed)
 
         is_end_of_profile = (time_elapsed > self.comm_session.end_of_profile_schedule) and (self.comm_session.end_of_profile_schedule <= 86400)
         if is_end_of_profile:
-            print('Passed the end of the schedule!')
+            logger.debug('Passed the end of the schedule!')
 
         # EVerest code end #
 
