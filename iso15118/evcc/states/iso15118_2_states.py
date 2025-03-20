@@ -792,7 +792,7 @@ class ChargeParameterDiscovery(StateEVCC):
         if charge_params_res.evse_processing == EVSEProcessing.FINISHED:
             # Reset the Ongoing timer
             self.comm_session.ongoing_timer = -1
-            if(self.comm_session.charging_session_timer < 0):
+            if (self.comm_session.charging_session_timer < 0):
                 self.comm_session.charging_session_timer = time()
 
             mqtt_publish.single("everest_external/nodered/{}/evcc/check_sim_speed", "test", hostname="mqtt-server")
@@ -822,7 +822,7 @@ class ChargeParameterDiscovery(StateEVCC):
             mqtt_publish.single("everest_external/nodered/{}/evcc/check_departure_time", "test", hostname="mqtt-server")
             dt_speed_msg  = mqtt_subscribe.simple("everest_external/nodered/evcc/confirm_departure_time", hostname="mqtt-server")
             # If end of profile > end of SECC schedule or no DT (dt==0), end renegotiation...
-            if (self.comm_session.end_of_profile_schedule >= int(str(dt_speed_msg .payload)[2:-1]) or 0 == int(str(dt_speed_msg .payload)[2:-1])): 
+            if (self.comm_session.end_of_profile_schedule >= int(str(dt_speed_msg .payload)[2:-1]) or 0 == int(str(dt_speed_msg .payload)[2:-1])):
                 self.comm_session.end_of_profile_schedule = 86400
 
             EVEREST_CTX.publish('AC_EVPowerReady', True)
