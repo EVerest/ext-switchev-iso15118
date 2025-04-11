@@ -133,7 +133,8 @@ from iso15118.shared.security import (
 from iso15118.evcc.states.power_curve import (
         LQRChargeCurve, 
         formatCurveData,
-        generate_new_schedule
+        generate_new_schedule,
+        generate_dummy_schedule
 )
 import paho.mqtt.publish as mqtt_publish
 import paho.mqtt.subscribe as mqtt_subscribe
@@ -629,10 +630,7 @@ class SimEVController(EVControllerInterface):
             logger.debug("End of Profile! Defaulting to EVCC profile enteries")
         else:
             ks = 1
-            # Check EAmount
-            mqtt_publish.single("everest_external/nodered/{}/evcc/check_eamount", "test", hostname="mqtt-server")
-            eamount_msg = mqtt_subscribe.simple("everest_external/nodered/evcc/confirm_eamount", hostname="mqtt-server")
-            eamount =  int(str(eamount_msg.payload)[2:-1])
+            eamount = EVEREST_EV_STATE.EAmount
             # Check which algorithm is being used
             mqtt_publish.single("everest_external/nodered/{}/evcc/check_algorithm", "test", hostname="mqtt-server")
             msg = mqtt_subscribe.simple("everest_external/nodered/evcc/confirm_algorithm", hostname="mqtt-server")

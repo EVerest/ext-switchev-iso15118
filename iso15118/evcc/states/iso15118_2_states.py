@@ -11,6 +11,8 @@ from time import time
 from typing import Any, List, Union
 import os
 
+from iso15118.evcc.everest import context as EVEREST_CONTEXT
+
 from iso15118.evcc import evcc_settings
 from iso15118.evcc.comm_session_handler import EVCCCommunicationSession
 from iso15118.evcc.states.evcc_state import StateEVCC
@@ -115,6 +117,7 @@ from iso15118.shared.states import Pause, Terminate
 from iso15118.shared.settings import get_PKI_PATH
 
 logger = logging.getLogger(__name__)
+EVEREST_EV_STATE = EVEREST_CONTEXT.ev_state
 
 # *** EVerest code start ***
 from iso15118.evcc.everest import context as EVEREST_CTX
@@ -819,10 +822,9 @@ class ChargeParameterDiscovery(StateEVCC):
             # EVerest code start #
             self.comm_session.end_of_profile_schedule = charging_profile.profile_entries[-1].start
 
-            mqtt_publish.single("everest_external/nodered/{}/evcc/check_departure_time", "test", hostname="mqtt-server")
-            dt_speed_msg  = mqtt_subscribe.simple("everest_external/nodered/evcc/confirm_departure_time", hostname="mqtt-server")
             # If end of profile > end of SECC schedule or no DT (dt==0), end renegotiation...
-            if (self.comm_session.end_of_profile_schedule >= int(str(dt_speed_msg .payload)[2:-1]) or 0 == int(str(dt_speed_msg .payload)[2:-1])):
+            departure_time = EVEREST_EV_STATE.DepartureTime
+            if (departure_time == None or  self.comm_session.end_of_profile_schedule >= departure_time or 0 == departure_time): 
                 self.comm_session.end_of_profile_schedule = 86400
 
             EVEREST_CTX.publish('AC_EVPowerReady', True)
