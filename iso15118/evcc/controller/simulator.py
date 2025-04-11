@@ -131,10 +131,9 @@ from iso15118.shared.security import (
 )
 
 from iso15118.evcc.states.power_curve import (
-        LQRChargeCurve, 
+        LQRChargeCurve,
         formatCurveData,
         generate_new_schedule,
-        generate_dummy_schedule
 )
 import paho.mqtt.publish as mqtt_publish
 import paho.mqtt.subscribe as mqtt_subscribe
