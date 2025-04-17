@@ -790,8 +790,6 @@ class ChargeParameterDiscovery(StateEVCC):
             msg.body.charge_parameter_discovery_res
         )
         ev_controller = self.comm_session.ev_controller
-
-        logger.debug(f'SAScheduleTuples are: {charge_params_res.sa_schedule_list.schedule_tuples}')
         if charge_params_res.evse_processing == EVSEProcessing.FINISHED:
             # Reset the Ongoing timer
             self.comm_session.ongoing_timer = -1
@@ -1198,7 +1196,6 @@ class ChargingStatus(StateEVCC):
 
         is_end_of_profile = (time_elapsed > self.comm_session.end_of_profile_schedule) and (self.comm_session.end_of_profile_schedule <= 86400)
         if is_end_of_profile:
-            logger.debug('Passed the end of the schedule!')
 
         # EVerest code end #
 
