@@ -797,14 +797,8 @@ class ChargeParameterDiscovery(StateEVCC):
             self.comm_session.ongoing_timer = -1
             if (self.comm_session.charging_session_timer < 0):
                 self.comm_session.charging_session_timer = time()
-
-            mqtt_publish.single("everest_external/nodered/{}/evcc/check_sim_speed", "test", hostname="mqtt-server")
-            sim_speed_msg  = mqtt_subscribe.simple("everest_external/nodered/evcc/confirm_sim_speed", hostname="mqtt-server")
-            self.comm_session.sim_speed = int(str(sim_speed_msg.payload)[2:-1])
-            logger.debug(f"Sim speed is now {self.comm_session.sim_speed}")
-            logger.debug(time(), self.comm_session.charging_session_timer, self.comm_session.sim_speed)
-            time_elapsed = (time() - self.comm_session.charging_session_timer) * self.comm_session.sim_speed
-            logger.debug(f'Charging Session Time Elapsed... {time_elapsed}')
+            time_elapsed = (time() - self.comm_session.charging_session_timer)
+            logger.debug('Charging Session Time Elapsed... ', time_elapsed)
 
             # TODO Look at EVSEStatus and EVSENotification and react accordingly
             #      if e.g. EVSENotification is set to STOP_CHARGING or if RCD
@@ -1198,7 +1192,7 @@ class ChargingStatus(StateEVCC):
             evse_max_current = charging_status_res.evse_max_current.value * pow(10, charging_status_res.evse_max_current.multiplier)
             EVEREST_CTX.publish('AC_EVSEMaxCurrent', evse_max_current)
 
-        time_elapsed = (time() - self.comm_session.charging_session_timer) * self.comm_session.sim_speed
+        time_elapsed = (time() - self.comm_session.charging_session_timer)
         logger.debug(f'End Of Schedule:: {self.comm_session.end_of_profile_schedule}')
         logger.debug(f'NewClockValue:: {time_elapsed}')
 
