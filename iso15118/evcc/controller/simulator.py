@@ -630,14 +630,7 @@ class SimEVController(EVControllerInterface):
         else:
             ks = 1
             eamount = EVEREST_EV_STATE.EAmount
-            # Check which algorithm is being used
-            mqtt_publish.single("everest_external/nodered/{}/evcc/check_algorithm", "test", hostname="mqtt-server")
-            msg = mqtt_subscribe.simple("everest_external/nodered/evcc/confirm_algorithm", hostname="mqtt-server")
-            algorithm_choice = str(msg.payload)[2:-1] # convert bytestring
-            if (algorithm_choice == 'algorithm_one'):
-                ks = 10
-            else: # == algorithm_two
-                ks = 1
+            ks = 10
             power_draw_progress, power_draw, time_vector = LQRChargeCurve(departure_time, eamount, pmax, ks)
             logger.debug(f"About to generate a new schedule with a EVCC_Profile {evcc_profile_entry_list}")
             new_schedule = generate_new_schedule(evcc_profile_entry_list, power_draw, time_vector, departure_time, time_elapsed)
