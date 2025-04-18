@@ -17,7 +17,7 @@ def LQRChargeCurve(DepTime, EAmount, PMax, KS):
     B=np.array([[1]])
     C=np.array([[1]])
     D=np.array([[0]])
-     
+
     #define the initial condition
     x0=np.array([[0]])
 
@@ -124,15 +124,7 @@ def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
         if (len(schedule_arr)):
             schedule_arr.pop(-1)
 
-        return(schedule_arr)
-
-
-    def check_new_schedule(curve_arr):
-        for schedule in secc_schedule:
-            for new_s in curve_arr:
-                print(f"Is {schedule.max_power.value} < {new_s.max_power.value}?")
-                if new_s.max_power.value > schedule.max_power.value:
-                    print('Schedule Creation Error: ', new_s.max_power.value)
+        return (schedule_arr)
 
     curve_schedule = [(x[0],y) for x, y, in zip(uc, tc)] # UC is in kWh, not kW
     # We get 24 from ISO 15118-2, Table 71.  This is the max number of profile enteries.
