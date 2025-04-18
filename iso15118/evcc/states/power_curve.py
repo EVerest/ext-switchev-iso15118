@@ -1,7 +1,3 @@
-import sys
-import json
-import math
-from time import time
 import numpy as np
 import control as ct
 from iso15118.shared.messages.iso15118_2.datatypes import ProfileEntryDetails
@@ -24,7 +20,7 @@ def LQRChargeCurve(DepTime, EAmount, PMax, KS):
      
     #define the initial condition
     x0=np.array([[0]])
-   
+
     # define the time vector for simulation
     startTime=0
     endTime = round(DepTime/60)*60
@@ -62,7 +58,7 @@ def LQRChargeCurve(DepTime, EAmount, PMax, KS):
 
     # YC is state of charge of the vehicle (progress to eamount)
     # UC is power
-    # TC is the timevector 
+    # TC is the timevector
     Yc = returnSimulationCL.states[0,:]
     Uc=  np.transpose(-K*(returnSimulationCL.states[0,:]-inputCL))
     Tc = returnSimulationCL.time
@@ -125,7 +121,7 @@ def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
         for i in range(0, len(curve_arr) - 2):
             schedule_arr.append(make_entry(curve_arr[i][0], curve_arr[i][1], curve_arr[i+1][1]))
         print('Done')
-        if(len(schedule_arr)): 
+        if (len(schedule_arr)):
             schedule_arr.pop(-1)
 
         return(schedule_arr)
@@ -143,7 +139,7 @@ def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
     # For some reason, EVerest only accepts 23... Investigate later
     curve_schedule = sample_schedule(curve_schedule)
 
-    if(len(curve_schedule) <= 2): # Check to see if we're done...
+    if (len(curve_schedule) <= 2): # Check to see if we're done...
         print("Done with profile, defaulting to SECC Schedule")
         return secc_schedule
 
