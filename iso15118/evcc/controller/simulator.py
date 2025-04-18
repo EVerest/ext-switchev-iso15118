@@ -136,7 +136,6 @@ from iso15118.evcc.states.power_curve import (
         generate_new_schedule,
 )
 import paho.mqtt.publish as mqtt_publish
-import paho.mqtt.subscribe as mqtt_subscribe
 
 from iso15118.shared.settings import get_PKI_PATH
 
