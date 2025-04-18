@@ -116,7 +116,6 @@ def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
         )
 
     def convert_tuple_schedule(curve_arr):
-        final_ts = curve_arr[-1][1]
         schedule_arr = []
         for i in range(0, len(curve_arr) - 2):
             schedule_arr.append(make_entry(curve_arr[i][0], curve_arr[i][1], curve_arr[i+1][1]))
