@@ -4,8 +4,6 @@ V2GMessage objects of the ISO 15118-2 protocol, from SessionSetupRes to
 SessionStopRes.
 """
 
-import paho.mqtt.publish as mqtt_publish
-import paho.mqtt.subscribe as mqtt_subscribe
 import logging
 from time import time
 from typing import Any, List, Union
