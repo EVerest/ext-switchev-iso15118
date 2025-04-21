@@ -30,6 +30,9 @@ VALIDITY_OEM_LEAF_CERT=1460
 VALIDITY_OEM_SUBCA2_CERT=1460
 VALIDITY_OEM_SUBCA1_CERT=1460
 VALIDITY_OEM_ROOT_CERT=3650
+VALIDITY_VEHICLE_SUBCA1_CERT=1460
+VALIDITY_VEHICLE_SUBCA2_CERT=365
+VALIDITY_VEHICLE_LEAF_CERT=60
 VALIDITY_CPS_LEAF_CERT=90
 VALIDITY_CPS_SUBCA2_CERT=730
 VALIDITY_CPS_SUBCA1_CERT=1460
@@ -158,6 +161,7 @@ CA_CSMS_PATH=$CERT_PATH/ca/csms
 CA_CPS_PATH=$CERT_PATH/ca/cps
 CA_CSO_PATH=$CERT_PATH/ca/cso
 CA_OEM_PATH=$CERT_PATH/ca/oem
+CA_VEHICLE_PATH=$CERT_PATH/ca/vehicle
 CA_MO_PATH=$CERT_PATH/ca/mo
 CA_V2G_PATH=$CERT_PATH/ca/v2g
 
@@ -165,6 +169,7 @@ CLIENT_CSMS_PATH=$CERT_PATH/client/csms
 CLIENT_CPS_PATH=$CERT_PATH/client/cps
 CLIENT_CSO_PATH=$CERT_PATH/client/cso
 CLIENT_OEM_PATH=$CERT_PATH/client/oem
+CLIENT_VEHICLE_PATH=$CERT_PATH/client/vehicle
 CLIENT_MO_PATH=$CERT_PATH/client/mo
 CLIENT_V2G_PATH=$CERT_PATH/client/v2g
 
@@ -174,12 +179,14 @@ mkdir -p $CA_CSMS_PATH
 mkdir -p $CA_CPS_PATH
 mkdir -p $CA_CSO_PATH
 mkdir -p $CA_OEM_PATH
+mkdir -p $CA_VEHICLE_PATH
 mkdir -p $CA_MO_PATH
 mkdir -p $CA_V2G_PATH
 mkdir -p $CLIENT_CSMS_PATH
 mkdir -p $CLIENT_CPS_PATH
 mkdir -p $CLIENT_CSO_PATH
 mkdir -p $CLIENT_OEM_PATH
+mkdir -p $CLIENT_VEHICLE_PATH
 mkdir -p $CLIENT_MO_PATH
 mkdir -p $CLIENT_V2G_PATH
 
@@ -356,7 +363,32 @@ cat $CA_CPS_PATH/CPS_SUB_CA2.pem $CA_CPS_PATH/CPS_SUB_CA1.pem > $CA_CPS_PATH/INT
 openssl pkcs12 -export -inkey $CLIENT_CPS_PATH/CPS_LEAF.key -in $CLIENT_CPS_PATH/CPS_LEAF.pem -certfile $CA_CPS_PATH/INTERMEDIATE_CPS_CA_CERTS.pem $SYMMETRIC_CIPHER_PKCS12 -passin pass:$password -passout pass:$password -name cps_leaf_cert -out $CLIENT_CPS_PATH/CPS_CERT_CHAIN.p12
 
 
-# 16) Finally we need to convert the certificates from PEM format to DER format
+# 16) Create an intermediate vehicle sub-CA 1 certificate which is directly signed
+#    by the V2GRootCA certificate
+# ---------------------------------------------------------------------------
+openssl ecparam -genkey -name $EC_CURVE | openssl ec $SYMMETRIC_CIPHER -passout pass:$password -out $CLIENT_VEHICLE_PATH/VEHICLE_SUB_CA1.key
+openssl req -new -key $CLIENT_VEHICLE_PATH/VEHICLE_SUB_CA1.key -passin pass:$password -config configs/vehicleSubCA1Cert.cnf -out $CSR_PATH/VEHICLE_SUB_CA1.csr
+openssl x509 -req -in $CSR_PATH/VEHICLE_SUB_CA1.csr -extfile configs/vehicleSubCA1Cert.cnf -extensions ext -CA $CA_V2G_PATH/V2G_ROOT_CA.pem -CAkey $CLIENT_V2G_PATH/V2G_ROOT_CA.key -passin pass:$password -set_serial 12360 -out $CA_VEHICLE_PATH/VEHICLE_SUB_CA1.pem -days $VALIDITY_VEHICLE_SUBCA1_CERT
+
+
+# 17) Create a second intermediate vehicle sub-CA certificate (sub-CA 2) just the way
+#    the previous intermedia certificate was created, which is directly signed
+#    by the VEHICLE_SUB_CA1
+openssl ecparam -genkey -name $EC_CURVE | openssl ec $SYMMETRIC_CIPHER -passout pass:$password -out $CLIENT_VEHICLE_PATH/VEHICLE_SUB_CA2.key
+openssl req -new -key $CLIENT_VEHICLE_PATH/VEHICLE_SUB_CA2.key -passin pass:$password -config configs/vehicleSubCA2Cert.cnf -out $CSR_PATH/VEHICLE_SUB_CA2.csr
+openssl x509 -req -in $CSR_PATH/VEHICLE_SUB_CA2.csr -extfile configs/vehicleSubCA2Cert.cnf -extensions ext -CA $CA_VEHICLE_PATH/VEHICLE_SUB_CA1.pem -CAkey $CLIENT_VEHICLE_PATH/VEHICLE_SUB_CA1.key -passin pass:$password -set_serial 12361 -days $VALIDITY_VEHICLE_SUBCA2_CERT -out $CA_VEHICLE_PATH/VEHICLE_SUB_CA2.pem
+
+
+# 18) Create an vehicle certificate, which is the leaf certificate belonging to
+#    the electric vehicle that authenticates itself to the SECC during a TLS
+#    handshake, signed by VEHICLE_SUB_CA2
+openssl ecparam -genkey -name $EC_CURVE | openssl ec $SYMMETRIC_CIPHER -passout pass:$password -out $CLIENT_VEHICLE_PATH/VEHICLE_LEAF.key
+openssl req -new -key $CLIENT_VEHICLE_PATH/VEHICLE_LEAF.key -passin pass:$password -config configs/vehicleLeafCert.cnf -out $CSR_PATH/VEHICLE_LEAF.csr
+openssl x509 -req -in $CSR_PATH/VEHICLE_LEAF.csr -extfile configs/vehicleLeafCert.cnf -extensions ext -CA $CA_VEHICLE_PATH/VEHICLE_SUB_CA2.pem -CAkey $CLIENT_VEHICLE_PATH/VEHICLE_SUB_CA2.key -passin pass:$password -set_serial 12362 -days $VALIDITY_VEHICLE_LEAF_CERT -out $CLIENT_VEHICLE_PATH/VEHICLE_LEAF.pem
+
+cat $CLIENT_VEHICLE_PATH/VEHICLE_LEAF.pem $CA_VEHICLE_PATH/VEHICLE_SUB_CA2.pem $CA_VEHICLE_PATH/VEHICLE_SUB_CA1.pem > $CLIENT_VEHICLE_PATH/VEHICLE_CERT_CHAIN.pem
+
+# 19) Finally we need to convert the certificates from PEM format to DER format
 #     (PEM is the default format, but ISO 15118 only allows DER format)
 openssl x509 -inform PEM -in $CA_V2G_PATH/V2G_ROOT_CA.pem -outform DER -out $CA_V2G_PATH/V2G_ROOT_CA.der
 openssl x509 -inform PEM -in $CA_CPS_PATH/CPS_SUB_CA1.pem -outform DER -out $CA_CPS_PATH/CPS_SUB_CA1.der
@@ -373,6 +405,9 @@ openssl x509 -inform PEM -in $CA_MO_PATH/MO_ROOT_CA.pem  -outform DER -out $CA_M
 openssl x509 -inform PEM -in $CA_MO_PATH/MO_SUB_CA1.pem  -outform DER -out $CA_MO_PATH/MO_SUB_CA1.der
 openssl x509 -inform PEM -in $CA_MO_PATH/MO_SUB_CA2.pem  -outform DER -out $CA_MO_PATH/MO_SUB_CA2.der
 openssl x509 -inform PEM -in $CLIENT_MO_PATH/MO_LEAF.pem -outform DER -out $CLIENT_MO_PATH/MO_LEAF.der
+openssl x509 -inform PEM -in $CA_VEHICLE_PATH/VEHICLE_SUB_CA1.pem -outform DER -out $CA_VEHICLE_PATH/VEHICLE_SUB_CA1.der
+openssl x509 -inform PEM -in $CA_VEHICLE_PATH/VEHICLE_SUB_CA2.pem -outform DER -out $CA_VEHICLE_PATH/VEHICLE_SUB_CA2.der
+openssl x509 -inform PEM -in $CLIENT_VEHICLE_PATH/VEHICLE_LEAF.pem  -outform DER -out $CLIENT_VEHICLE_PATH/VEHICLE_LEAF.der
 # Since the intermediate certificates need to be in PEM format when putting them
 # in a PKCS12 container and the resulting PKCS12 file is a binary format, it
 # might be sufficient. Otherwise, I have currently no idea how to covert the
@@ -380,13 +415,13 @@ openssl x509 -inform PEM -in $CLIENT_MO_PATH/MO_LEAF.pem -outform DER -out $CLIE
 # the PKCS12 container.
 
 
-# 17) In case you want the private keys in PKCS#8 file format and DER encoded,
+# 20) In case you want the private keys in PKCS#8 file format and DER encoded,
 #     use this command.
 openssl pkcs8 -topk8 -in $CLIENT_MO_PATH/MO_SUB_CA2.key -inform PEM -passin pass:$password -passout pass:$password -outform DER -out $CLIENT_MO_PATH/MO_SUB_CA2.pkcs8.der -v1 PBE-SHA1-3DES
 
 # Side notes for OCSP stapling in Java: see http://openjdk.java.net/jeps/249
 
-# 18) Place all passwords to generated private keys in separate text files.
+# 21) Place all passwords to generated private keys in separate text files.
 #     In this script, even though we use a single password for all certificates,
 #     certificates from a different source could have been generated with a different
 #     passphrase/passkey/password altogether. Leave them empty if no password is required.
@@ -396,6 +431,7 @@ echo $password > $CLIENT_MO_PATH/MO_LEAF_PASSWORD.txt
 echo $password > $CLIENT_CPS_PATH/CPS_LEAF_PASSWORD.txt
 echo $password > $CLIENT_MO_PATH/MO_SUB_CA2_LEAF_PASSWORD.txt
 echo $password > $CLIENT_V2G_PATH/V2G_ROOT_CA_PASSWORD.txt
+echo $password > $CLIENT_VEHICLE_PATH/VEHICLE_LEAF_PASSWORD.txt
 
 # assume CSO and CSMS are same authority
 cp -r $CA_CSMS_PATH/* $CA_CSO_PATH
@@ -510,10 +546,12 @@ then
     mkdir -p $everest_core_path/config/certs/ca/v2g/ && cp $CA_V2G_PATH/* $everest_core_path/config/certs/ca/v2g/
     mkdir -p $everest_core_path/config/certs/ca/cps/ && cp $CA_CPS_PATH/* $everest_core_path/config/certs/ca/cps/
     mkdir -p $everest_core_path/config/certs/ca/oem/ && cp $CA_OEM_PATH/* $everest_core_path/config/certs/ca/oem/
+    mkdir -p $everest_core_path/config/certs/ca/vehicle && cp $CA_VEHICLE_PATH/* $everest_core_path/config/certs/ca/vehicle
 
     mkdir -p $everest_core_path/config/certs/client/cps && cp $CLIENT_CPS_PATH/* $everest_core_path/config/certs/client/cps
     mkdir -p $everest_core_path/config/certs/client/csms && cp $CLIENT_CSMS_PATH/* $everest_core_path/config/certs/client/csms
     mkdir -p $everest_core_path/config/certs/client/cso && cp $CLIENT_CSO_PATH/* $everest_core_path/config/certs/client/cso
     mkdir -p $everest_core_path/config/certs/client/oem && cp $CLIENT_OEM_PATH/* $everest_core_path/config/certs/client/oem
     mkdir -p $everest_core_path/config/certs/client/mo && cp $CLIENT_MO_PATH/* $everest_core_path/config/certs/client/mo
+    mkdir -p $everest_core_path/config/certs/client/vehicle && cp $CLIENT_VEHICLE_PATH/* $everest_core_path/config/certs/client/vehicle
 fi

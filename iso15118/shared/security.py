@@ -81,7 +81,7 @@ from iso15118.shared.messages.xmldsig import (
     Transform,
     Transforms,
 )
-from iso15118.shared.settings import ENABLE_TLS_1_3, get_PKI_PATH
+from iso15118.shared.settings import enabled_tls_1_3, get_PKI_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ def get_ssl_context(server_side: bool, ciphersuites: str = None) -> Optional[SSL
          as well as read the password.
     """
 
-    if ENABLE_TLS_1_3:
+    if enabled_tls_1_3:
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     else:
         # Specifying protocol as `PROTOCOL_TLS` does best effort.
@@ -164,14 +164,14 @@ def get_ssl_context(server_side: bool, ciphersuites: str = None) -> Optional[SSL
             logger.exception(exc)
             return None
 
-        if ENABLE_TLS_1_3:
+        if enabled_tls_1_3:
             # In 15118-20 we should also verify EVCC's certificate chain.
             # The spec however says TLS 1.3 should also support 15118-2
             # (Table 5 in V2G20 specification)
             # Marc/André - this suggests we will need mutual auth 15118-2 if
             # TLS1.3 is enabled.
             ssl_context.load_verify_locations(
-                cafile=os.path.join(get_PKI_PATH(), CertPath.OEM_ROOT_PEM))
+                cafile=os.path.join(get_PKI_PATH(), CertPath.VEHICLE_ROOT_PEM))
             ssl_context.verify_mode = VerifyMode.CERT_REQUIRED
         else:
             # In ISO 15118-2, we only verify the SECC's certificates
@@ -187,24 +187,24 @@ def get_ssl_context(server_side: bool, ciphersuites: str = None) -> Optional[SSL
         ssl_context.verify_mode = VerifyMode.CERT_REQUIRED
         ssl_context.set_ciphers(ciphersuites)
 
-        if ENABLE_TLS_1_3:
+        if enabled_tls_1_3:
             try:
                 ssl_context.load_cert_chain(
-                    certfile=os.path.join(get_PKI_PATH(), CertPath.OEM_CERT_CHAIN_PEM),
-                    keyfile=os.path.join(get_PKI_PATH(), KeyPath.OEM_LEAF_PEM),
+                    certfile=os.path.join(get_PKI_PATH(), CertPath.VEHICLE_CERT_CHAIN_PEM),
+                    keyfile=os.path.join(get_PKI_PATH(), KeyPath.VEHICLE_LEAF_PEM),
                     password=load_priv_key_pass(os.path.join(
-                        get_PKI_PATH(), KeyPasswordPath.OEM_LEAF_KEY_PASSWORD)),
+                        get_PKI_PATH(), KeyPasswordPath.VEHICLE_LEAF_KEY_PASSWORD)),
                 )
             except SSLError:
                 logger.exception(
-                    "SSLError, can't load OEM certificate chain for SSL "
+                    "SSLError, can't load Vehicle certificate chain for SSL "
                     "context. Private key (keyfile) probably doesn't "
                     "match certificate (certfile) or password for "
                     "private is key invalid. Returning None instead."
                 )
                 return None
             except FileNotFoundError:
-                logger.exception("Can't find OEM certfile or keyfile for SSL context")
+                logger.exception("Can't find Vehicle certfile or keyfile for SSL context")
                 return None
             except Exception as exc:
                 logger.exception(exc)
@@ -1502,6 +1502,14 @@ class CertPath(str, Enum):
     OEM_ROOT_PEM = "ca/oem/OEM_ROOT_CA.pem"
     OEM_CERT_CHAIN_PEM = "client/oem/OEM_CERT_CHAIN.pem"
 
+    # Vehicle
+    VEHICLE_LEAF_DER = "client/vehicle/VEHICLE_LEAF.der"
+    VEHICLE_SUB_CA2_DER = "ca/vehicle/VEHICLE_SUB_CA2.der"
+    VEHICLE_SUB_CA1_DER = "ca/vehicle/VEHICLE_SUB_CA1.der"
+    VEHICLE_ROOT_DER = "ca/v2g/V2G_ROOT_CA.der"
+    VEHICLE_ROOT_PEM = "ca/v2g/V2G_ROOT_CA.pem"
+    VEHICLE_CERT_CHAIN_PEM = "client/vehicle/VEHICLE_CERT_CHAIN.pem"
+
 
 class KeyPath(str, Enum):
     """
@@ -1536,6 +1544,12 @@ class KeyPath(str, Enum):
     OEM_SUB_CA1_PEM = "client/oem/OEM_SUB_CA1.key"
     OEM_ROOT_PEM = "client/oem/OEM_ROOT_CA.key"
 
+    # Vehicle
+    VEHICLE_LEAF_PEM = "client/vehicle/VEHICLE_LEAF.key"
+    VEHICLE_SUB_CA2_PEM = "client/vehicle/VEHICLE_SUB_CA2.key"
+    VEHICLE_SUB_CA1_PEM = "client/vehicle/VEHICLE_SUB_CA1.key"
+    VEHICLE_ROOT_PEM = "client/v2g/V2G_ROOT_CA.key"
+
 
 class KeyPasswordPath(str, Enum):
     """
@@ -1551,3 +1565,4 @@ class KeyPasswordPath(str, Enum):
     CONTRACT_LEAF_KEY_PASSWORD = "client/mo/MO_LEAF_PASSWORD.txt"
     CPS_LEAF_KEY_PASSWORD = "client/cps/CPS_LEAF_PASSWORD.txt"
     MO_SUB_CA2_PASSWORD = "client/cso/CPO_SUB_CA2_PASSWORD.txt"
+    VEHICLE_LEAF_KEY_PASSWORD = "client/vehicle/VEHICLE_LEAF_PASSWORD.txt"
