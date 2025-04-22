@@ -3,6 +3,9 @@ import control as ct
 from iso15118.shared.messages.iso15118_2.datatypes import ProfileEntryDetails
 from iso15118.shared.messages.datatypes import PVPMax
 from iso15118.shared.messages.enums import UnitSymbol
+import logging
+
+logger = logging.getLogger(__name__)
 
 """beginning_of_profile_schedule: int= -1
 Created on Fri Aug  9 00:37:56 2024
@@ -49,7 +52,7 @@ def LQRChargeCurve(DepTime, EAmount, PMax, KS):
     # define the input for closed-loop simulation
     inputCL=np.zeros(shape=(1,numberSamples))
     inputCL[0,:]=xd*np.ones(numberSamples)
-    print(f"Created input array with {EAmount=} and {numberSamples=}")
+    logger.debug(f"Created input array with {EAmount=} and {numberSamples=}")
     returnSimulationCL = ct.forced_response(sysStateSpaceCl,
                                           timeVector,
                                           inputCL,
@@ -119,7 +122,7 @@ def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
         schedule_arr = []
         for i in range(0, len(curve_arr) - 2):
             schedule_arr.append(make_entry(curve_arr[i][0], curve_arr[i][1], curve_arr[i+1][1]))
-        print('Done')
+        logger.debug('Done converting tuple schedule')
         if (len(schedule_arr)):
             schedule_arr.pop(-1)
 
@@ -131,11 +134,11 @@ def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
     curve_schedule = sample_schedule(curve_schedule)
 
     if (len(curve_schedule) <= 2): # Check to see if we're done...
-        print("Done with profile, defaulting to SECC Schedule")
+        logger.debug("Done with profile, defaulting to SECC Schedule")
         return secc_schedule
 
     curve_schedule = convert_tuple_schedule(curve_schedule)
-    print("Returning a curve schedule of:", curve_schedule)
+    logger.debug("Returning a curve schedule of:", curve_schedule)
 
     return curve_schedule
 
@@ -154,5 +157,5 @@ def generate_dummy_schedule():
             max_phases_in_use = None
             )
         )
-    print('Katie:', temp)
+    logger.debug('Dummy schedule:', temp)
     return temp
