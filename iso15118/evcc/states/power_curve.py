@@ -29,7 +29,7 @@ def LQRChargeCurve(DepTime, EAmount, PMax, KS):
     endTime = round(DepTime/60)*60
     numberSamples = round(endTime/60)
     timeVector=np.linspace(startTime,endTime,numberSamples)
-   
+
     # state weighting matrix
     Q=KS/1000
      
@@ -138,7 +138,7 @@ def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
         return secc_schedule
 
     curve_schedule = convert_tuple_schedule(curve_schedule)
-    logger.debug("Returning a curve schedule of:", curve_schedule)
+    logger.debug(f"Returning a curve schedule of: {curve_schedule}")
 
     return curve_schedule
 
@@ -157,5 +157,5 @@ def generate_dummy_schedule():
             max_phases_in_use = None
             )
         )
-    logger.debug('Dummy schedule:', temp)
+    logger.debug(f'Dummy schedule: {temp}')
     return temp
