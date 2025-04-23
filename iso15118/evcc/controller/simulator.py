@@ -362,9 +362,9 @@ class SimEVController(EVControllerInterface):
                 ev_max_discharge_power=RationalNumber(exponent=3, value=11),
                 ev_min_discharge_power=RationalNumber(exponent=0, value=100),
             )
-        elif selected_service.service == ServiceV20.DC:
+        elif selected_service.service in [ServiceV20.DC, ServiceV20.MCS]:
             return dc_cpd_params
-        elif selected_service.service == ServiceV20.DC_BPT:
+        elif selected_service.service in [ServiceV20.DC_BPT, ServiceV20.MCS_BPT]:
             return BPTDCChargeParameterDiscoveryReqParams(
                 **(dc_cpd_params.dict()),
                 # Todo(sl): Update later if bpt is also available

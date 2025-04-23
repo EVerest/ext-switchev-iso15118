@@ -330,6 +330,9 @@ class ServiceV20(Enum):
     AC_BPT = 5
     DC_BPT = 6
     DC_ACDP_BPT = 7
+    MCS = 8
+    MCS_BPT = 9
+    AC_DER = 10
     INTERNET = 65
     PARKING_STATUS = 66
 
@@ -368,6 +371,15 @@ class DCConnector(IntEnum):
     DUAL2 = 3
     DUAL4 = 4
 
+class McsConnector(IntEnum):
+
+    MCS = 1,
+    CHAOJI = 2,
+    ULTRACHAOJI = 3,
+    RMCS = 4,
+    XMCS = 5,
+    AVIATION = 6,
+    MARINE = 7,
 
 class ControlMode(IntEnum):
     """See e.g. Table 205 in section 8.4.3.2.2 of ISO 15118-20"""
