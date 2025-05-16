@@ -48,6 +48,9 @@ def load_requested_energy_services(
         "AC_BPT",
         "DC_BPT",
         "DC_ACDP_BPT",
+        "MCS",
+        "MCS_BPT",
+        "AC_DER",
         "INTERNET",
         "PARKING_STATUS",
     ]
