@@ -747,10 +747,15 @@ class ServiceSelection(StateEVCC):
         elif self.comm_session.selected_energy_service.service in (
             ServiceV20.DC,
             ServiceV20.DC_BPT,
+            ServiceV20.MCS,
+            ServiceV20.MCS_BPT,
         ):
             dc_params, bpt_dc_params = None, None
             self.comm_session.selected_charging_type_is_ac = False
-            if self.comm_session.selected_energy_service.service == ServiceV20.DC:
+            if self.comm_session.selected_energy_service.service in (
+                ServiceV20.DC,
+                ServiceV20.MCS,
+            ):
                 dc_params = await self.comm_session.ev_controller.get_charge_params_v20(
                     self.comm_session.selected_energy_service
                 )
@@ -850,6 +855,7 @@ class ScheduleExchange(StateEVCC):
                 if self.comm_session.selected_energy_service.service in (
                     ServiceV20.AC_BPT,
                     ServiceV20.DC_BPT,
+                    ServiceV20.MCS_BPT,
                 ):
                     power_value = ev_power_profile.entry_list.entries[-1].power.value
                     if power_value < 0:
@@ -934,6 +940,8 @@ class PowerDelivery(StateEVCC):
             if self.comm_session.selected_energy_service.service in [
                 ServiceV20.DC,
                 ServiceV20.DC_BPT,
+                ServiceV20.MCS,
+                ServiceV20.MCS_BPT,
             ]:
                 welding_detection_req = DCWeldingDetectionReq(
                     header=MessageHeader(
@@ -1022,8 +1030,13 @@ class PowerDelivery(StateEVCC):
                 ISOV20PayloadTypes.AC_MAINSTREAM,
             )
 
-        elif selected_energy_service.service in [ServiceV20.DC, ServiceV20.DC_BPT]:
-            if selected_energy_service.service == ServiceV20.DC:
+        elif selected_energy_service.service in [
+            ServiceV20.DC,
+            ServiceV20.DC_BPT,
+            ServiceV20.MCS,
+            ServiceV20.MCS_BPT
+        ]:
+            if selected_energy_service.service in [ServiceV20.DC, ServiceV20.MCS]:
                 if control_mode == ControlMode.SCHEDULED:
                     scheduled_params = (
                         await ev_controller.get_scheduled_dc_charge_loop_params()
@@ -1032,7 +1045,7 @@ class PowerDelivery(StateEVCC):
                     dynamic_params = (
                         await ev_controller.get_dynamic_dc_charge_loop_params()
                     )
-            elif selected_energy_service.service == ServiceV20.DC_BPT:
+            elif selected_energy_service.service in [ServiceV20.DC_BPT, ServiceV20.MCS_BPT]:
                 if control_mode == ControlMode.SCHEDULED:
                     bpt_scheduled_params = (
                         await ev_controller.get_bpt_scheduled_dc_charge_loop_params()
@@ -1587,6 +1600,7 @@ class DCPreCharge(StateEVCC):
         if self.comm_session.selected_energy_service.service in (
             ServiceV20.AC_BPT,
             ServiceV20.DC_BPT,
+            ServiceV20.MCS_BPT,
         ):
             bpt_channel_selection = ChannelSelection.CHARGE
             if ev_power_profile is not None:
@@ -1691,7 +1705,7 @@ class DCChargeLoop(StateEVCC):
     async def build_current_demand_data(self):
         scheduled_params, dynamic_params = None, None
         bpt_scheduled_params, bpt_dynamic_params = None, None
-        if self.comm_session.selected_energy_service.service == ServiceV20.DC:
+        if self.comm_session.selected_energy_service.service in [ServiceV20.DC, ServiceV20.MCS]:
             if self.comm_session.control_mode == ControlMode.SCHEDULED:
                 scheduled_params = (
                     await self.comm_session.ev_controller.get_scheduled_dc_charge_loop_params()  # noqa
@@ -1700,7 +1714,7 @@ class DCChargeLoop(StateEVCC):
                 dynamic_params = (
                     await self.comm_session.ev_controller.get_dynamic_dc_charge_loop_params()  # noqa
                 )
-        elif self.comm_session.selected_energy_service.service == ServiceV20.DC_BPT:
+        elif self.comm_session.selected_energy_service.service in [ServiceV20.DC_BPT, ServiceV20.MCS_BPT]:
             if self.comm_session.control_mode == ControlMode.SCHEDULED:
                 bpt_scheduled_params = (
                     await self.comm_session.ev_controller.get_bpt_scheduled_dc_charge_loop_params()  # noqa
