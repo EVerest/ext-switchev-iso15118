@@ -154,8 +154,7 @@ class SessionSetup(StateEVCC):
                 parameter_set = self.comm_session.selected_energy_service.parameter_set
                 for param in parameter_set.parameters:
                     if param.name == ParameterName.CONTROL_MODE:
-                        self.comm_session.control_mode = ControlMode(
-                            param.int_value)
+                        self.comm_session.control_mode = ControlMode(param.int_value)
 
         if old_session_joined and self.comm_session.selected_energy_service.service in (ServiceV20.AC, ServiceV20.AC_BPT):
             ac_params, bpt_ac_params = None, None
