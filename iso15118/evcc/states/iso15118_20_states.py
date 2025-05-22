@@ -9,6 +9,7 @@ import time
 from typing import Any, List, Union, cast
 import os
 
+from iso15118.evcc import evcc_settings
 from iso15118.evcc.comm_session_handler import EVCCCommunicationSession
 from iso15118.evcc.states.evcc_state import StateEVCC
 from iso15118.shared.exceptions import PrivateKeyReadError
@@ -100,7 +101,7 @@ from iso15118.shared.security import (
     load_cert_chain,
     load_priv_key,
 )
-from iso15118.shared.states import Terminate
+from iso15118.shared.states import Pause, Terminate
 from iso15118.shared.settings import get_PKI_PATH
 
 logger = logging.getLogger(__name__)
@@ -143,19 +144,92 @@ class SessionSetup(StateEVCC):
         self.comm_session.session_id = msg.header.session_id
         self.comm_session.evse_id = session_setup_res.evse_id
 
-        auth_setup_req = AuthorizationSetupReq(
-            header=MessageHeader(
-                session_id=self.comm_session.session_id, timestamp=time.time()
-            )
-        )
+        old_session_joined: bool = False
 
-        self.create_next_message(
-            AuthorizationSetup,
-            auth_setup_req,
-            Timeouts.AUTHORIZATION_SETUP_REQ,
-            Namespace.ISO_V20_COMMON_MSG,
-            ISOV20PayloadTypes.MAINSTREAM,
-        )
+        if evcc_settings.ev_session_context.selected_energy_service:
+            old_session_joined = True
+            self.comm_session.selected_energy_service = evcc_settings.ev_session_context.selected_energy_service
+
+            if self.comm_session.selected_energy_service:
+                parameter_set = self.comm_session.selected_energy_service.parameter_set
+                for param in parameter_set.parameters:
+                    if param.name == ParameterName.CONTROL_MODE:
+                        self.comm_session.control_mode = ControlMode(param.int_value)
+
+        if old_session_joined and self.comm_session.selected_energy_service.service in (ServiceV20.AC, ServiceV20.AC_BPT):
+            ac_params, bpt_ac_params = None, None
+            self.comm_session.selected_charging_type_is_ac = True
+            if self.comm_session.selected_energy_service.service == ServiceV20.AC:
+                ac_params = await self.comm_session.ev_controller.get_charge_params_v20(
+                    self.comm_session.selected_energy_service
+                )
+            else:
+                bpt_ac_params = (
+                    await self.comm_session.ev_controller.get_charge_params_v20(
+                        self.comm_session.selected_energy_service
+                    )
+                )
+
+            next_req = ACChargeParameterDiscoveryReq(
+                header=MessageHeader(
+                    session_id=self.comm_session.session_id,
+                    timestamp=time.time(),
+                ),
+                ac_params=ac_params,
+                bpt_ac_params=bpt_ac_params,
+            )
+            self.create_next_message(
+                ACChargeParameterDiscovery,
+                next_req,
+                Timeouts.CHARGE_PARAMETER_DISCOVERY_REQ,
+                Namespace.ISO_V20_AC,
+                ISOV20PayloadTypes.AC_MAINSTREAM,
+            )
+        elif old_session_joined and self.comm_session.selected_energy_service.service in (ServiceV20.DC, ServiceV20.DC_BPT):
+
+            dc_params, bpt_dc_params = None, None
+            self.comm_session.selected_charging_type_is_ac = False
+            if self.comm_session.selected_energy_service.service == ServiceV20.DC:
+                dc_params = await self.comm_session.ev_controller.get_charge_params_v20(
+                    self.comm_session.selected_energy_service
+                )
+            else:
+                bpt_dc_params = (
+                    await self.comm_session.ev_controller.get_charge_params_v20(
+                        self.comm_session.selected_energy_service
+                    )
+                )
+
+            next_req = DCChargeParameterDiscoveryReq(
+                header=MessageHeader(
+                    session_id=self.comm_session.session_id,
+                    timestamp=time.time(),
+                ),
+                dc_params=dc_params,
+                bpt_dc_params=bpt_dc_params,
+            )
+
+            self.create_next_message(
+                DCChargeParameterDiscovery,
+                next_req,
+                Timeouts.CHARGE_PARAMETER_DISCOVERY_REQ,
+                Namespace.ISO_V20_DC,
+                ISOV20PayloadTypes.DC_MAINSTREAM,
+            )
+        else:
+            auth_setup_req = AuthorizationSetupReq(
+                header=MessageHeader(
+                    session_id=self.comm_session.session_id, timestamp=time.time()
+                )
+            )
+
+            self.create_next_message(
+                AuthorizationSetup,
+                auth_setup_req,
+                Timeouts.AUTHORIZATION_SETUP_REQ,
+                Namespace.ISO_V20_COMMON_MSG,
+                ISOV20PayloadTypes.MAINSTREAM,
+            )
 
 
 class AuthorizationSetup(StateEVCC):
@@ -935,6 +1009,7 @@ class PowerDelivery(StateEVCC):
         if self.comm_session.charging_session_stop_v20 in (
             ChargingSession.SERVICE_RENEGOTIATION,
             ChargingSession.TERMINATE,
+            ChargingSession.PAUSE
         ):
             await self.comm_session.ev_controller.enable_charging(False)
             if self.comm_session.selected_energy_service.service in [
@@ -1179,6 +1254,8 @@ class SessionStop(StateEVCC):
         ):
             self.comm_session.renegotiation_requested = False
             self.next_state = ServiceDiscovery
+        elif self.comm_session.charging_session_stop_v20 == ChargingSession.PAUSE:
+            self.next_state = Pause
         else:
             self.next_state = Terminate
 
@@ -1671,9 +1748,11 @@ class DCChargeLoop(StateEVCC):
         if charge_loop_res.evse_status:
             renegotiation = False
             evse_notification = charge_loop_res.evse_status.evse_notification
+            pause = False
             if evse_notification not in [
                 EVSENotification.SERVICE_RENEGOTIATION,
                 EVSENotification.TERMINATE,
+                EVSENotification.PAUSE,
             ]:
                 raise NotImplementedError(
                     f"Processing for EVSE Notification "
@@ -1682,13 +1761,20 @@ class DCChargeLoop(StateEVCC):
                 )
             if evse_notification == EVSENotification.SERVICE_RENEGOTIATION:
                 renegotiation = True
+            elif evse_notification == EVSENotification.PAUSE:
+                pause = True
+                EVEREST_CTX.publish('pause_from_charger', None)
+            else:
+                EVEREST_CTX.publish('AC_StopFromCharger', None)
 
-            EVEREST_CTX.publish('AC_StopFromCharger', None)
-            
             self.stop_v20_charging(
-                next_state=PowerDelivery, renegotiate_requested=renegotiation
+                next_state=PowerDelivery, renegotiate_requested=renegotiation, pause=pause
             )
-
+        # TODO(sl): Check if dynamic mode is active and the ev wants to do a pause
+        elif await self.comm_session.ev_controller.pause():
+            self.stop_v20_charging(
+                next_state=PowerDelivery, renegotiate_requested=False, pause=True
+            )
         elif await self.comm_session.ev_controller.continue_charging():
             current_demand_req = await self.build_current_demand_data()
 
@@ -1778,7 +1864,7 @@ class DCWeldingDetection(StateEVCC):
                     session_id=self.comm_session.session_id,
                     timestamp=time.time(),
                 ),
-                charging_session=ChargingSession.TERMINATE,
+                charging_session=self.comm_session.charging_session_stop_v20,
             )
             next_state = SessionStop
             next_request: V2GRequest = session_stop_req

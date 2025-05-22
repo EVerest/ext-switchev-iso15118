@@ -83,6 +83,7 @@ class EVSessionContext:
     session_id: Optional[str] = None
     selected_auth_option: Optional[AuthEnum] = None
     requested_energy_mode: Optional[EnergyTransferModeEnum] = None
+    selected_energy_service: Optional[SelectedEnergyService] = None
 
 class EVControllerInterface(ABC):
     # ============================================================================

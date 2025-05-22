@@ -183,5 +183,9 @@ class SupportedAppProtocol(StateEVCC):
             evcc_settings.ev_session_context.session_id = None
         else:
             self.comm_session.session_id = bytes(length).hex().upper()
+            # Reset whole ev_session_context
+            evcc_settings.ev_session_context.selected_auth_option = None
+            evcc_settings.ev_session_context.requested_energy_mode = None
+            evcc_settings.ev_session_context.selected_energy_service = None
 
         return self.comm_session.session_id
