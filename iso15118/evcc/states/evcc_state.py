@@ -246,7 +246,8 @@ class StateEVCC(State, ABC):
         self.next_state = Terminate
 
     def stop_v20_charging(
-        self, next_state: Type["State"], renegotiate_requested: bool = False
+        self, next_state: Type["State"], renegotiate_requested: bool = False,
+        pause: bool = False
     ):
         power_delivery_req = PowerDeliveryReq(
             header=MessageHeader(
@@ -280,6 +281,8 @@ class StateEVCC(State, ABC):
             logger.debug(
                 f"ChargeProgress is set to {ChargeProgress.SCHEDULE_RENEGOTIATION}"
             )
+        elif pause:
+            self.comm_session.charging_session_stop_v20 = ChargingSession.PAUSE
         else:
             self.comm_session.charging_session_stop_v20 = ChargingSession.TERMINATE
             # TODO Implement also a mechanism for pausing

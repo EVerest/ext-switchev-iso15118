@@ -129,14 +129,10 @@ from iso15118.shared.security import (
     KeyPath,
     to_ec_priv_key,
 )
-
 from iso15118.evcc.states.power_curve import (
         LQRChargeCurve,
-        formatCurveData,
         generate_new_schedule,
 )
-import paho.mqtt.publish as mqtt_publish
-
 from iso15118.shared.settings import get_PKI_PATH
 
 logger = logging.getLogger(__name__)
@@ -634,12 +630,7 @@ class SimEVController(EVControllerInterface):
             logger.debug(f"About to generate a new schedule with a EVCC_Profile {evcc_profile_entry_list}")
             new_schedule = generate_new_schedule(evcc_profile_entry_list, power_draw, time_vector, departure_time, time_elapsed)
             logger.debug(f"New schedule of length {len(new_schedule)} created")
-
-            formatted_curve = formatCurveData(new_schedule)
-            # Then Re-Publish the chosen curve as the final selection
-            logger.debug(f"About to publish {str(formatted_curve)=}")
-            mqtt_publish.single("everest_external/nodered/{}/evcc/active_powercurve", str(formatted_curve), hostname="mqtt-server")
-
+        
         # TODO If a SalesTariff is present and digitally signed (and TLS is used),
         #      verify each sales tariff with the mobility operator sub 2 certificate
 

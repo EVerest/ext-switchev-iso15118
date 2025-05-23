@@ -197,6 +197,7 @@ class ServiceDiscovery(StateEVCC):
             self.stop_state_machine("ChargeService not offered")
             return
 
+        logger.debug("hello -- about to select an auth option?")
         self.select_auth_mode(service_discovery_res.auth_option_list.auth_options)
         await self.select_services(service_discovery_res)
         await self.select_energy_transfer_mode()
@@ -216,7 +217,7 @@ class ServiceDiscovery(StateEVCC):
 
         if len(self.comm_session.service_details_to_request) == 0:
             payment_service_selection_req = PaymentServiceSelectionReq(
-                selected_auth_option=self.comm_session.selected_auth_option,
+                selected_auth_option="ExternalPayment",
                 selected_service_list=SelectedServiceList(
                     selected_service=self.comm_session.selected_services
                 ),
@@ -806,8 +807,9 @@ class ChargeParameterDiscovery(StateEVCC):
                 charging_profile,
             ) = await ev_controller.process_sa_schedules_v2(
                 charge_params_res.sa_schedule_list.schedule_tuples,
-+                time_elapsed,
+                time_elapsed,
             )
+
             # time_elapsed,
             # EVerest code start #
             self.comm_session.end_of_profile_schedule = charging_profile.profile_entries[-1].start
@@ -1188,13 +1190,11 @@ class ChargingStatus(StateEVCC):
             evse_max_current = charging_status_res.evse_max_current.value * pow(10, charging_status_res.evse_max_current.multiplier)
             EVEREST_CTX.publish('AC_EVSEMaxCurrent', evse_max_current)
 
-        time_elapsed = (time() - self.comm_session.charging_session_timer)
-        logger.debug(f'End Of Schedule:: {self.comm_session.end_of_profile_schedule}')
-        logger.debug(f'NewClockValue:: {time_elapsed}')
+            time_elapsed = (time() - self.comm_session.charging_session_timer)
+            logger.debug(f'End Of Schedule:: {self.comm_session.end_of_profile_schedule}')
+            logger.debug(f'NewClockValue:: {time_elapsed}')
 
-        is_end_of_profile = (time_elapsed > self.comm_session.end_of_profile_schedule) and (self.comm_session.end_of_profile_schedule <= 86400)
-        if is_end_of_profile:
-
+            is_end_of_profile = (time_elapsed > self.comm_session.end_of_profile_schedule) and (self.comm_session.end_of_profile_schedule <= 86400)
         # EVerest code end #
 
         if charging_status_res.receipt_required and self.comm_session.is_tls:
