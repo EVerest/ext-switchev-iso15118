@@ -129,7 +129,10 @@ from iso15118.shared.security import (
     KeyPath,
     to_ec_priv_key,
 )
-
+from iso15118.evcc.states.power_curve import (
+        LQRChargeCurve,
+        generate_new_schedule,
+)
 from iso15118.shared.settings import get_PKI_PATH
 
 logger = logging.getLogger(__name__)
@@ -283,7 +286,7 @@ class SimEVController(EVControllerInterface):
         dc_charge_params = None
 
         if (await self.get_energy_transfer_mode(protocol)).startswith("AC"):
-            e_amount = PVEAmount(multiplier=0, value=60,
+            e_amount = PVEAmount(multiplier=3, value=EVEREST_EV_STATE.EAmount,
                                  unit=UnitSymbol.WATT_HOURS)
             ev_max_voltage = PVEVMaxVoltage(
                 multiplier=0, value=400, unit=UnitSymbol.VOLTAGE
@@ -295,7 +298,7 @@ class SimEVController(EVControllerInterface):
                 multiplier=0, value=10, unit=UnitSymbol.AMPERE
             )
             ac_charge_params = ACEVChargeParameter(
-                departure_time=0,
+                departure_time=EVEREST_EV_STATE.DepartureTime,
                 e_amount=e_amount,
                 ev_max_voltage=ev_max_voltage,
                 ev_max_current=ev_max_current,
@@ -306,7 +309,7 @@ class SimEVController(EVControllerInterface):
                 multiplier=1, value=6000, unit=UnitSymbol.WATT_HOURS
             )
             dc_charge_params = DCEVChargeParameter(
-                departure_time=0,
+                departure_time=EVEREST_EV_STATE.DepartureTime,
                 dc_ev_status=await self.get_dc_ev_status(),
                 ev_maximum_current_limit=self.dc_ev_charge_params.dc_max_current_limit,
                 ev_maximum_power_limit=self.dc_ev_charge_params.dc_max_power_limit,
@@ -422,7 +425,7 @@ class SimEVController(EVControllerInterface):
         )
 
         scheduled_params = ScheduledScheduleExchangeReqParams(
-            departure_time=7200,
+            departure_time=EVEREST_EV_STATE.DepartureTime,
             ev_target_energy_request=RationalNumber(exponent=3, value=10),
             ev_max_energy_request=RationalNumber(exponent=3, value=20),
             ev_min_energy_request=RationalNumber(exponent=-2, value=5),
@@ -436,7 +439,7 @@ class SimEVController(EVControllerInterface):
     ) -> DynamicScheduleExchangeReqParams:
         """Overrides EVControllerInterface.get_dynamic_se_params()."""
         dynamic_params = DynamicScheduleExchangeReqParams(
-            departure_time=7200,
+            departure_time=EVEREST_EV_STATE.DepartureTime,
             min_soc=30,
             target_soc=80,
             ev_target_energy_request=RationalNumber(exponent=3, value=40),
@@ -577,12 +580,13 @@ class SimEVController(EVControllerInterface):
         return schedule.sa_schedule_tuple_id
 
     async def process_sa_schedules_v2(
-        self, sa_schedules: List[SAScheduleTuple]
+        self, sa_schedules: List[SAScheduleTuple], time_elapsed
     ) -> Tuple[ChargeProgressV2, int, ChargingProfile]:
         """Overrides EVControllerInterface.process_sa_schedules()."""
         secc_schedule = sa_schedules.pop()
         evcc_profile_entry_list: List[ProfileEntryDetails] = []
 
+        logger.debug(f"Processing SASchedules! ${sa_schedules} ${time_elapsed}")
         # The charging schedule coming from the SECC is called 'schedule', the
         # pendant coming from the EVCC (after having processed the offered
         # schedule(s)) is called 'profile'. Therefore, we use the prefix
@@ -610,13 +614,30 @@ class SimEVController(EVControllerInterface):
                 )
                 evcc_profile_entry_list.append(last_profile_entry_details)
 
+        # Set Curve Variables...
+        logger.debug("About to handle pmax schedule %s" % secc_schedule.p_max_schedule.schedule_entries[0])
+        p_max = secc_schedule.p_max_schedule.schedule_entries[0].p_max
+        pmax:float = p_max.value * pow(10, p_max.multiplier)
+        departure_time = secc_schedule.p_max_schedule.schedule_entries[0].time_interval.duration
+        new_schedule = evcc_profile_entry_list
+        if (time_elapsed  > departure_time):
+            logger.debug("End of Profile! Defaulting to EVCC profile enteries")
+        else:
+            ks = 1
+            eamount = EVEREST_EV_STATE.EAmount
+            ks = 10
+            power_draw_progress, power_draw, time_vector = LQRChargeCurve(departure_time, eamount, pmax, ks)
+            logger.debug(f"About to generate a new schedule with a EVCC_Profile {evcc_profile_entry_list}")
+            new_schedule = generate_new_schedule(evcc_profile_entry_list, power_draw, time_vector, departure_time, time_elapsed)
+            logger.debug(f"New schedule of length {len(new_schedule)} created")
+        
         # TODO If a SalesTariff is present and digitally signed (and TLS is used),
         #      verify each sales tariff with the mobility operator sub 2 certificate
 
         return (
             ChargeProgressV2.START,
             secc_schedule.sa_schedule_tuple_id,
-            ChargingProfile(profile_entries=evcc_profile_entry_list),
+            ChargingProfile(profile_entries=new_schedule),
         )
 
     async def continue_charging(self) -> bool:
@@ -753,7 +774,7 @@ class SimEVController(EVControllerInterface):
         else:
             # Dynamic Mode
             dynamic_params = DynamicACChargeLoopReqParams(
-                departure_time=2000,
+                departure_time=EVEREST_EV_STATE.DepartureTime,
                 ev_target_energy_request=RationalNumber(exponent=3, value=40),
                 ev_max_energy_request=RationalNumber(exponent=3, value=60),
                 ev_min_energy_request=RationalNumber(exponent=3, value=-20),
@@ -905,7 +926,7 @@ class SimEVController(EVControllerInterface):
             multiplier=1, value=6000, unit=UnitSymbol.WATT_HOURS
         )
         dc_charge_params = DCEVChargeParameter(
-            departure_time=0,
+            departure_time=EVEREST_EV_STATE.DepartureTime,
             dc_ev_status=await self.get_dc_ev_status(),
             ev_maximum_current_limit=self.dc_ev_discharge_params.dc_max_current_limit,
             ev_maximum_power_limit=self.dc_ev_discharge_params.dc_max_power_limit,
