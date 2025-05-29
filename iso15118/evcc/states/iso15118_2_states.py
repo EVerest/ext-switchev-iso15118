@@ -9,6 +9,8 @@ from time import time
 from typing import Any, List, Union
 import os
 
+from iso15118.evcc.everest import context as EVEREST_CONTEXT
+
 from iso15118.evcc import evcc_settings
 from iso15118.evcc.comm_session_handler import EVCCCommunicationSession
 from iso15118.evcc.states.evcc_state import StateEVCC
@@ -63,6 +65,7 @@ from iso15118.shared.messages.iso15118_2.body import (
     PowerDeliveryReq,
     PowerDeliveryRes,
     PreChargeReq,
+    ResponseCode,
     PreChargeRes,
     ServiceDetailReq,
     ServiceDetailRes,
@@ -112,6 +115,7 @@ from iso15118.shared.states import Pause, Terminate
 from iso15118.shared.settings import get_PKI_PATH
 
 logger = logging.getLogger(__name__)
+EVEREST_EV_STATE = EVEREST_CONTEXT.ev_state
 
 # *** EVerest code start ***
 from iso15118.evcc.everest import context as EVEREST_CTX
@@ -193,6 +197,7 @@ class ServiceDiscovery(StateEVCC):
             self.stop_state_machine("ChargeService not offered")
             return
 
+        logger.debug("hello -- about to select an auth option?")
         self.select_auth_mode(service_discovery_res.auth_option_list.auth_options)
         await self.select_services(service_discovery_res)
         await self.select_energy_transfer_mode()
@@ -788,6 +793,9 @@ class ChargeParameterDiscovery(StateEVCC):
         if charge_params_res.evse_processing == EVSEProcessing.FINISHED:
             # Reset the Ongoing timer
             self.comm_session.ongoing_timer = -1
+            if (self.comm_session.charging_session_timer < 0):
+                self.comm_session.charging_session_timer = time()
+            time_elapsed = (time() - self.comm_session.charging_session_timer)
 
             # TODO Look at EVSEStatus and EVSENotification and react accordingly
             #      if e.g. EVSENotification is set to STOP_CHARGING or if RCD
@@ -798,10 +806,18 @@ class ChargeParameterDiscovery(StateEVCC):
                 schedule_id,
                 charging_profile,
             ) = await ev_controller.process_sa_schedules_v2(
-                charge_params_res.sa_schedule_list.schedule_tuples
+                charge_params_res.sa_schedule_list.schedule_tuples,
+                time_elapsed,
             )
 
             # EVerest code start #
+            self.comm_session.end_of_profile_schedule = charging_profile.profile_entries[-1].start
+
+            # If end of profile > end of SECC schedule or no DT (dt==0), end renegotiation...
+            departure_time = EVEREST_EV_STATE.DepartureTime
+            if (departure_time is None or self.comm_session.end_of_profile_schedule >= departure_time or 0 == departure_time): 
+                self.comm_session.end_of_profile_schedule = 86400
+
             EVEREST_CTX.publish('AC_EVPowerReady', True)
             # EVerest code end #
             await self.comm_session.ev_controller.enable_charging(True)
@@ -1171,6 +1187,12 @@ class ChargingStatus(StateEVCC):
         if charging_status_res.evse_max_current:
             evse_max_current = charging_status_res.evse_max_current.value * pow(10, charging_status_res.evse_max_current.multiplier)
             EVEREST_CTX.publish('AC_EVSEMaxCurrent', evse_max_current)
+
+            time_elapsed = (time() - self.comm_session.charging_session_timer)
+            logger.debug(f'End Of Schedule:: {self.comm_session.end_of_profile_schedule}')
+            logger.debug(f'NewClockValue:: {time_elapsed}')
+
+            is_end_of_profile = (time_elapsed > self.comm_session.end_of_profile_schedule) and (self.comm_session.end_of_profile_schedule <= 86400)
         # EVerest code end #
 
         if charging_status_res.receipt_required and self.comm_session.is_tls:
@@ -1213,7 +1235,7 @@ class ChargingStatus(StateEVCC):
                     f"MeteringReceiptReq: {exc}"
                 )
                 return
-        elif ac_evse_status.evse_notification == EVSENotification.RE_NEGOTIATION:
+        elif ac_evse_status.evse_notification == EVSENotification.RE_NEGOTIATION or is_end_of_profile:
             self.comm_session.renegotiation_requested = True
             power_delivery_req = PowerDeliveryReq(
                 charge_progress=ChargeProgress.RENEGOTIATE,
