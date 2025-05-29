@@ -125,7 +125,6 @@ class EVCCCommunicationSession(V2GCommunicationSession):
         # value, is used to mark when the 24 entry schedule has terminated.
         # See ISO 15118-2 Subclause 8.5.2.10 for details
         self.end_of_profile_schedule: int= -1
-        self.sim_speed: int = -1
         self.departure_time: int = -1
         # Temporarily save the ScheduleExchangeReq, which need to be resent to the SECC
         # if the response message's EVSEProcessing field is set to "Ongoing"
