@@ -32,7 +32,7 @@ def LQRChargeCurve(DepTime, EAmount, PMax, KS):
 
     # state weighting matrix
     Q=KS/1000
-    
+
     # input weighting matrix
     R=KS*1000
 
