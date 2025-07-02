@@ -65,7 +65,6 @@ from iso15118.shared.messages.iso15118_2.body import (
     PowerDeliveryReq,
     PowerDeliveryRes,
     PreChargeReq,
-    ResponseCode,
     PreChargeRes,
     ServiceDetailReq,
     ServiceDetailRes,
