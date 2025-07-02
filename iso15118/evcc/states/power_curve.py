@@ -1,4 +1,3 @@
-import numpy as np
 import control as ct
 from iso15118.shared.messages.iso15118_2.datatypes import ProfileEntryDetails
 from iso15118.shared.messages.datatypes import PVPMax
@@ -16,19 +15,22 @@ LQRchargeCurve
 # KS is btwn 1 and 20
 def LQRChargeCurve(DepTime, EAmount, PMax, KS):
     # system matrices
-    A=np.array([[0]])
-    B=np.array([[1]])
-    C=np.array([[1]])
-    D=np.array([[0]])
+    A=[0]*1
+    B=[1]*1
+    C=[1]*1
+    D=[0]*1
 
     #define the initial condition
-    x0=np.array([[0]])
+    x0= [0] * 1
 
     # define the time vector for simulation
     startTime=0
     endTime = round(DepTime/60)*60
     numberSamples = round(endTime/60)
-    timeVector=np.linspace(startTime,endTime,numberSamples)
+    interval = (endTime - startTime) / numberSamples
+    timeVector = [0] * numberSamples
+    for i in range(0, numberSamples):
+        timeVector[i] = startTime + i * interval
 
     # state weighting matrix
     Q=KS/1000
@@ -39,31 +41,56 @@ def LQRChargeCurve(DepTime, EAmount, PMax, KS):
     # system matrices
 
     sysStateSpace=ct.ss(A,B,C,D)
-    xd=np.array([[EAmount]])
+    xd = [EAmount]
 
     K, S, E = ct.lqr(sysStateSpace, Q, R)
 
-    Acl=A-np.matmul(B,K)
+    def multiply_matrices(matrix_a, matrix_b):
+        # Check for valid dimensions for multiplication
+        if len(matrix_a[0]) != len(matrix_b):
+            raise ValueError("Number of columns in the first matrix must equal the number of rows in the second matrix.")
+
+        # Initialize the result matrix with zeros
+        result_matrix = [[0 for _ in range(len(matrix_b[0]))] for _ in range(len(matrix_a))]
+
+        # Perform matrix multiplication
+        for i in range(len(matrix_a)):
+            for j in range(len(matrix_b[0])):
+                for k in range(len(matrix_a[0])):
+                    result_matrix[i][j] += matrix_a[i][k] * matrix_b[k][j]
+
+        return result_matrix
+
+    Acl=A-multiply_matrices(B,K)
     Bcl=-Acl
      
     # define the state-space model
     sysStateSpaceCl=ct.ss(Acl,Bcl,C,D)
      
     # define the input for closed-loop simulation
-    inputCL=np.zeros(shape=(1,numberSamples))
-    inputCL[0,:]=xd*np.ones(numberSamples)
+    inputCL=[[0] * numberSamples] 
+    inputCL[0,:]=xd*([1] * numberSamples)
     logger.debug(f"Created input array with {EAmount=} and {numberSamples=}")
     returnSimulationCL = ct.forced_response(sysStateSpaceCl,
                                           timeVector,
                                           inputCL,
                                           x0)
+
+    def transpose_nested_loops(matrix):
+        # Initialize a new matrix with dimensions swapped
+        transposed_matrix = [[0 for _ in range(len(matrix))] for _ in range(len(matrix[0]))]
+
+        for i in range(len(matrix)):
+            for j in range(len(matrix[0])):
+                transposed_matrix[j][i] = matrix[i][j]
+        return transposed_matrix
    
 
     # YC is state of charge of the vehicle (progress to eamount)
     # UC is power
     # TC is the timevector
     Yc = returnSimulationCL.states[0,:]
-    Uc=  np.transpose(-K*(returnSimulationCL.states[0,:]-inputCL))
+    Uc = transpose_nested_loops(-K*(returnSimulationCL.states[0,:]-inputCL)) #also complex, might need a nested loop again
     Tc = returnSimulationCL.time
 
     return Yc, Uc, Tc
