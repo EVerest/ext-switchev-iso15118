@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2020 - 2023 Pionix GmbH and Contributors to EVerest
 from dataclasses import dataclass, field
-from typing import Optional
 
 DEFAULT_DC_MAX_CURRENT_LIMIT_A = 300
 DEFAULT_DC_MAX_POWER_LIMIT_W = 150000
