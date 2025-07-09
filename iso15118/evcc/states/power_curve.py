@@ -63,12 +63,12 @@ def LQRChargeCurve(DepTime, EAmount, PMax, KS):
 
     Acl=A-multiply_matrices(B,K)
     Bcl=-Acl
-     
+    
     # define the state-space model
     sysStateSpaceCl=ct.ss(Acl,Bcl,C,D)
      
     # define the input for closed-loop simulation
-    inputCL=[[0] * numberSamples] 
+    inputCL=[[0] * numberSamples]
     inputCL[0,:]=xd*([1] * numberSamples)
     logger.debug(f"Created input array with {EAmount=} and {numberSamples=}")
     returnSimulationCL = ct.forced_response(sysStateSpaceCl,
