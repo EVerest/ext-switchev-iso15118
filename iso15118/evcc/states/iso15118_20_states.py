@@ -1375,7 +1375,7 @@ class ACChargeLoop(StateEVCC):
                 )
             if evse_notification == EVSENotification.SERVICE_RENEGOTIATION:
                 renegotiation = True
-            
+
             EVEREST_CTX.publish('AC_StopFromCharger', None)
 
             self.stop_v20_charging(
