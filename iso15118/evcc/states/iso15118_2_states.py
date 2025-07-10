@@ -802,7 +802,7 @@ class ChargeParameterDiscovery(StateEVCC):
             )
 
             # EVerest code start #
-            EVEREST_CTX.publish('AC_EVPowerReady', True)
+            EVEREST_CTX.publish('ev_power_ready', True)
             # EVerest code end #
             await self.comm_session.ev_controller.enable_charging(True)
             if self.comm_session.selected_charging_type_is_ac:
@@ -1170,7 +1170,7 @@ class ChargingStatus(StateEVCC):
         # EVerest code start #
         if charging_status_res.evse_max_current:
             evse_max_current = charging_status_res.evse_max_current.value * pow(10, charging_status_res.evse_max_current.multiplier)
-            EVEREST_CTX.publish('AC_EVSEMaxCurrent', evse_max_current)
+            EVEREST_CTX.publish('ac_evse_max_current', evse_max_current)
         # EVerest code end #
 
         if charging_status_res.receipt_required and self.comm_session.is_tls:
@@ -1227,7 +1227,7 @@ class ChargingStatus(StateEVCC):
             )
             logger.debug(f"ChargeProgress is set to {ChargeProgress.RENEGOTIATE}")
         elif ac_evse_status.evse_notification == EVSENotification.STOP_CHARGING:
-            EVEREST_CTX.publish('AC_StopFromCharger', None)
+            EVEREST_CTX.publish('stop_from_charger', None)
             self.comm_session.charging_session_stop_v2 = ChargingSession.TERMINATE
             await self.stop_pause_charging()
         elif await self.comm_session.ev_controller.pause():
@@ -1379,7 +1379,7 @@ class PreCharge(StateEVCC):
                 ),
             )
 
-            EVEREST_CTX.publish('DC_PowerOn', None)
+            EVEREST_CTX.publish('dc_power_on', None)
 
             self.create_next_message(
                 PowerDelivery,
@@ -1446,7 +1446,7 @@ class CurrentDemand(StateEVCC):
         dc_evse_status: DCEVSEStatus = current_demand_res.dc_evse_status
 
         if dc_evse_status.evse_notification == EVSENotification.STOP_CHARGING:
-            EVEREST_CTX.publish('AC_StopFromCharger', None)
+            EVEREST_CTX.publish('stop_from_charger', None)
             self.comm_session.charging_session_stop_v2 = ChargingSession.TERMINATE
             await self.stop_pause_charging()
         elif await self.comm_session.ev_controller.pause():
