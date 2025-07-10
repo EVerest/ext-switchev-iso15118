@@ -377,7 +377,7 @@ class ChargeParameterDiscovery(StateEVCC):
             )
 
             # EVerest code start #
-            EVEREST_CTX.publish('AC_EVPowerReady', True)
+            EVEREST_CTX.publish('ev_power_ready', True)
             # EVerest code end #
 
             cable_check_req = CableCheckReq(
@@ -564,7 +564,7 @@ class PreCharge(StateEVCC):
             self.comm_session.ongoing_timer = -1
             power_delivery_req: PowerDeliveryReq = await self.build_power_delivery_req()
             
-            EVEREST_CTX.publish('DC_PowerOn', None)
+            EVEREST_CTX.publish('dc_power_on', None)
 
             self.create_next_message(
                 PowerDelivery,
@@ -712,7 +712,7 @@ class CurrentDemand(StateEVCC):
         # EVSE status must always be EVSE ready
         if dc_evse_status.evse_status_code is not DCEVSEStatusCode.EVSE_READY:
             logger.debug("EVSE Notification received requesting to stop charging.")
-            EVEREST_CTX.publish('AC_StopFromCharger', None)
+            EVEREST_CTX.publish('stop_from_charger', None)
             await self.stop_charging()
         elif await self.comm_session.ev_controller.continue_charging():
             self.create_next_message(
