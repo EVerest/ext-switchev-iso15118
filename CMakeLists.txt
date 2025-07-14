@@ -27,16 +27,6 @@ install(
 
 find_package(Python3 COMPONENTS Interpreter)
 
-ev_create_pip_install_targets(
-    PACKAGE_NAME
-        "iso15118"
-)
-
-ev_create_python_wheel_targets(
-    PACKAGE_NAME
-        "iso15118"
-)
-
 add_custom_target(iso15118_requirements_pip_install_dist
     COMMAND
         ${Python3_EXECUTABLE} -m pip install --force-reinstall -r requirements.txt
@@ -44,6 +34,20 @@ add_custom_target(iso15118_requirements_pip_install_dist
         ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT
         "Installing iso15118 requirements from distribution"
+)
+
+ev_create_pip_install_targets(
+    PACKAGE_NAME
+        "iso15118"
+    DIST_DEPENDS
+        iso15118_requirements_pip_install_dist
+    LOCAL_DEPENDS
+        iso15118_requirements_pip_install_dist
+)
+
+ev_create_python_wheel_targets(
+    PACKAGE_NAME
+        "iso15118"
 )
 
 if (ISO15118_2_GENERATE_AND_INSTALL_CERTIFICATES)
