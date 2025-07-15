@@ -51,6 +51,7 @@ from iso15118.shared.messages.iso15118_20.common_messages import (
     ScheduleExchangeReq,
     ScheduleExchangeRes,
     SelectedService,
+    SelectedServiceList,
     ServiceDetailReq,
     ServiceDetailRes,
     ServiceDiscoveryReq,
@@ -723,7 +724,11 @@ class ServiceDetail(StateEVCC):
                 timestamp=time.time(),
             ),
             selected_energy_service=selected_energy_service,
-            selected_vas_list=selected_vas_list if selected_vas_list else None,
+            selected_vas_list=(
+                SelectedServiceList(selected_services=selected_vas_list)
+                if selected_vas_list
+                else None
+            ),
         )
 
         return service_selection_req
