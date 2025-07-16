@@ -103,21 +103,3 @@ def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
     logger.debug(f"Returning a curve schedule of: {curve_schedule}")
 
     return curve_schedule
-
-def generate_dummy_schedule():
-    watt_vals = [3330, 2300, 1300, 500]
-    temp = []
-
-    for i in range(len(watt_vals)):
-        temp.append(ProfileEntryDetails(
-            start=10 * i,
-            max_power=PVPMax(
-                multiplier=0,
-                value=watt_vals[i],
-                unit=UnitSymbol.WATT
-            ),
-            max_phases_in_use = None
-            )
-        )
-    logger.debug(f'Dummy schedule: {temp}')
-    return temp
