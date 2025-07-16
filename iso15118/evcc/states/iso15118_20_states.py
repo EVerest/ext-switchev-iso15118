@@ -51,6 +51,7 @@ from iso15118.shared.messages.iso15118_20.common_messages import (
     ScheduleExchangeReq,
     ScheduleExchangeRes,
     SelectedService,
+    SelectedServiceList,
     ServiceDetailReq,
     ServiceDetailRes,
     ServiceDiscoveryReq,
@@ -723,7 +724,11 @@ class ServiceDetail(StateEVCC):
                 timestamp=time.time(),
             ),
             selected_energy_service=selected_energy_service,
-            selected_vas_list=selected_vas_list if selected_vas_list else None,
+            selected_vas_list=(
+                SelectedServiceList(selected_services=selected_vas_list)
+                if selected_vas_list
+                else None
+            ),
         )
 
         return service_selection_req
@@ -938,6 +943,9 @@ class ScheduleExchange(StateEVCC):
                         bpt_channel_selection = ChannelSelection.CHARGE
 
             await self.comm_session.ev_controller.enable_charging(True)
+
+            EVEREST_CTX.publish('ev_power_ready', True)
+
             if self.comm_session.selected_charging_type_is_ac:
                 power_delivery_req = PowerDeliveryReq(
                     header=MessageHeader(
@@ -958,9 +966,6 @@ class ScheduleExchange(StateEVCC):
                     ISOV20PayloadTypes.MAINSTREAM,
                 )
             else:
-                
-                EVEREST_CTX.publish('AC_EVPowerReady', True)
-                
                 cable_check_req = DCCableCheckReq(
                     header=MessageHeader(
                         session_id=self.comm_session.session_id,
@@ -1375,6 +1380,9 @@ class ACChargeLoop(StateEVCC):
                 )
             if evse_notification == EVSENotification.SERVICE_RENEGOTIATION:
                 renegotiation = True
+
+            EVEREST_CTX.publish('stop_from_charger', None)
+
             self.stop_v20_charging(
                 next_state=PowerDelivery, renegotiate_requested=renegotiation
             )
@@ -1629,7 +1637,7 @@ class DCPreCharge(StateEVCC):
             namespace = Namespace.ISO_V20_COMMON_MSG
             timeout = Timeouts.POWER_DELIVERY_REQ
 
-            EVEREST_CTX.publish('DC_PowerOn', None)
+            EVEREST_CTX.publish('dc_power_on', None)
 
         else:
             next_request = await self.build_pre_charge_message(
@@ -1765,7 +1773,7 @@ class DCChargeLoop(StateEVCC):
                 pause = True
                 EVEREST_CTX.publish('pause_from_charger', None)
             else:
-                EVEREST_CTX.publish('AC_StopFromCharger', None)
+                EVEREST_CTX.publish('stop_from_charger', None)
 
             self.stop_v20_charging(
                 next_state=PowerDelivery, renegotiate_requested=renegotiation, pause=pause
