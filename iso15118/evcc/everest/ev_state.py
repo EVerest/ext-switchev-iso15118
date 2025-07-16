@@ -35,6 +35,9 @@ class EVState:
     dc_discharge_max_power_limit: float = 0
     dc_discharge_target_current: float = 0
 
+    # Actual SoC
+    actual_soc: int = 0
+
     # SAE J2847/2
     SAEJ2847_V2H_V2G_Active = False
     minimal_soc = 20

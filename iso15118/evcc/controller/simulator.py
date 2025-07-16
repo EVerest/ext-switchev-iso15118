@@ -751,7 +751,7 @@ class SimEVController(EVControllerInterface):
         return False
 
     async def is_charging_complete(self) -> bool:
-        if self._soc == 100 or self._charging_is_completed:
+        if EVEREST_EV_STATE.actual_soc == 100 or self._charging_is_completed:
             return True
         else:
             return False
@@ -829,14 +829,14 @@ class SimEVController(EVControllerInterface):
         return DCEVStatusDINSPEC(
             ev_ready=True,
             ev_error_code=DCEVErrorCode.NO_ERROR,
-            ev_ress_soc=self._soc,
+            ev_ress_soc=EVEREST_EV_STATE.actual_soc,
         )
 
     async def get_dc_ev_status(self) -> DCEVStatus:
         return DCEVStatus(
             ev_ready=True,
             ev_error_code=DCEVErrorCode.NO_ERROR,
-            ev_ress_soc=self._soc,
+            ev_ress_soc=EVEREST_EV_STATE.actual_soc,
         )
 
     async def get_scheduled_dc_charge_loop_params(
@@ -924,7 +924,7 @@ class SimEVController(EVControllerInterface):
     async def get_display_params(self) -> DisplayParameters:
         """Overrides EVControllerInterface.get_display_params()."""
         return DisplayParameters(
-            present_soc=self._soc,
+            present_soc=EVEREST_EV_STATE.actual_soc,
             charging_complete=await self.is_charging_complete(),
         )
 
