@@ -4,7 +4,10 @@ from iso15118.shared.messages.enums import UnitSymbol
 import logging
 
 logger = logging.getLogger(__name__)
-
+'''
+    deptime_linear is used to generate a linear power curve
+    for a given departure time, energy amount, and maximum power.
+'''
 def deptime_linear(DepTime: float, EAmount: float, PMax: float) -> tuple[list,list,list]:
     # to distribute power linearly during the requested time
     # DT is in minutes
@@ -32,13 +35,13 @@ def deptime_linear(DepTime: float, EAmount: float, PMax: float) -> tuple[list,li
     return SoC_progress, [Power_curve], Time_vector
 
 '''
-    formatCurveData takes the output of the LQR ChargeCurve below, and formats
+    formatCurveData takes the output of the charge curve calculation, and formats
     it into a JSON string that will be accepted by Node-RED's `chart`
     module.
 
     @author Katie
 '''
-def formatCurveData(profile_entry_list):
+def formatCurveData(profile_entry_list: list[ProfileEntryDetails]) -> dict:
     # Node-RED expects watts & miliseconds
     yc_curve = [{"x": float(ped.start), "y": float(ped.max_power.value)} for ped in profile_entry_list]
     return {
@@ -55,17 +58,16 @@ def formatCurveData(profile_entry_list):
 
     @author Katie
 '''
-def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
+def generate_new_schedule(secc_schedule: list[ProfileEntryDetails], uc: list, tc: list, departure_time: float, time_elapsed: float) -> list[ProfileEntryDetails]:
     # time_offset = 24 * # max enteries is 24, so refresh every <24 -ish seconds?
     # Define some helper functions...
     # Evenly sample from the `curve_schedule`< up to the end timestamp
-    def sample_schedule(schedule):
-
+    def sample_schedule(schedule: list[tuple[float, float]]) -> list[tuple[float, float]]:
         sliced_array = [x for x in schedule if (time_elapsed <= x[1])]
         return sliced_array[0:23]
 
     # Generates a ProfileEntryDetails obj for the final schedule
-    def make_entry(val, timestamp, next_ts):
+    def make_entry(val: float, timestamp: float, next_ts: float) -> ProfileEntryDetails:
         # First, convert kWh to kW
         time_delta = (float(next_ts) - float(timestamp)) / 3600
         watts = (1000 * val) / time_delta
@@ -80,7 +82,7 @@ def generate_new_schedule(secc_schedule, uc, tc, departure_time, time_elapsed):
             max_phases_in_use = None
         )
 
-    def convert_tuple_schedule(curve_arr):
+    def convert_tuple_schedule(curve_arr: list[tuple[float, float]]) -> list[ProfileEntryDetails]:
         schedule_arr = []
         for i in range(0, len(curve_arr) - 2):
             schedule_arr.append(make_entry(curve_arr[i][0], curve_arr[i][1], curve_arr[i+1][1]))
