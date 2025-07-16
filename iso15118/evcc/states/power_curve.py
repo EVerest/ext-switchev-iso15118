@@ -14,9 +14,9 @@ def deptime_linear(DepTime: float, EAmount: float, PMax: float) -> tuple[list,li
     # EAmount is in Wh
     # PMax is in W
     num_entries = 24 #TODO: determine how many entries are allowed
-    time_interval = DepTime / num_entries 
+    time_interval = DepTime / num_entries
 
-    P = EAmount / (DepTime / 60)  # convert Wh to W
+    P = EAmount / (DepTime / 60) # convert Wh to W
     if P > PMax:
         P = PMax  # limit to PMax
 
@@ -25,14 +25,15 @@ def deptime_linear(DepTime: float, EAmount: float, PMax: float) -> tuple[list,li
     Time_vector = []
     for i in range(num_entries):
         Time_vector.append(i * time_interval)
-    
+
     # Create a state of charge progress vector
     SoC_progress = []
     for j in range(num_entries):
         #time elapsed (in hours) times power (in W) gives us the energy in Wh
-        SoC_progress.append((Time_vector[j] /60) * Power_curve[j]) 
+        SoC_progress.append((Time_vector[j] /60) * Power_curve[j])
 
     return SoC_progress, [Power_curve], Time_vector
+
 
 '''
     formatCurveData takes the output of the charge curve calculation, and formats
@@ -58,7 +59,8 @@ def formatCurveData(profile_entry_list: list[ProfileEntryDetails]) -> dict:
 
     @author Katie
 '''
-def generate_new_schedule(secc_schedule: list[ProfileEntryDetails], uc: list, tc: list, departure_time: float, time_elapsed: float) -> list[ProfileEntryDetails]:
+def generate_new_schedule(secc_schedule: list[ProfileEntryDetails], uc: list, tc: list, 
+                            departure_time: float, time_elapsed: float) -> list[ProfileEntryDetails]:
     # time_offset = 24 * # max enteries is 24, so refresh every <24 -ish seconds?
     # Define some helper functions...
     # Evenly sample from the `curve_schedule`< up to the end timestamp
