@@ -130,8 +130,8 @@ from iso15118.shared.security import (
     to_ec_priv_key,
 )
 from iso15118.evcc.states.power_curve import (
-        LQRChargeCurve,
-        generate_new_schedule,
+    deptime_linear,
+    generate_new_schedule,
 )
 from iso15118.shared.settings import get_PKI_PATH
 
@@ -623,10 +623,8 @@ class SimEVController(EVControllerInterface):
         if (time_elapsed  > departure_time):
             logger.debug("End of Profile! Defaulting to EVCC profile enteries")
         else:
-            ks = 1
             eamount = EVEREST_EV_STATE.EAmount
-            ks = 10
-            power_draw_progress, power_draw, time_vector = LQRChargeCurve(departure_time, eamount, pmax, ks)
+            power_draw_progress, power_draw, time_vector = deptime_linear(departure_time, eamount, pmax)
             logger.debug(f"About to generate a new schedule with a EVCC_Profile {evcc_profile_entry_list}")
             new_schedule = generate_new_schedule(evcc_profile_entry_list, power_draw, time_vector, departure_time, time_elapsed)
             logger.debug(f"New schedule of length {len(new_schedule)} created")

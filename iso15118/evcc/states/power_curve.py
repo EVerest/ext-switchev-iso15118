@@ -1,5 +1,3 @@
-import numpy as np
-import control as ct
 from iso15118.shared.messages.iso15118_2.datatypes import ProfileEntryDetails
 from iso15118.shared.messages.datatypes import PVPMax
 from iso15118.shared.messages.enums import UnitSymbol
@@ -7,67 +5,31 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-"""beginning_of_profile_schedule: int= -1
-Created on Fri Aug  9 00:37:56 2024
-LQRchargeCurve
+def deptime_linear(DepTime: float, EAmount: float, PMax: float) -> tuple[list,list,list]:
+    # to distribute power linearly during the requested time
+    # DT is in minutes
+    # EAmount is in Wh
+    # PMax is in W
+    num_entries = 24 #TODO: determine how many entries are allowed
+    time_interval = DepTime / num_entries 
 
-@author: ANAND
-"""
-# KS is btwn 1 and 20
-def LQRChargeCurve(DepTime, EAmount, PMax, KS):
-    # system matrices
-    A=np.array([[0]])
-    B=np.array([[1]])
-    C=np.array([[1]])
-    D=np.array([[0]])
+    P = EAmount / (DepTime / 60)  # convert Wh to W
+    if P > PMax:
+        P = PMax  # limit to PMax
 
-    #define the initial condition
-    x0=np.array([[0]])
-
-    # define the time vector for simulation
-    startTime=0
-    endTime = round(DepTime/60)*60
-    numberSamples = round(endTime/60)
-    timeVector=np.linspace(startTime,endTime,numberSamples)
-
-    # state weighting matrix
-    Q=KS/1000
-
-    # input weighting matrix
-    R=KS*1000
-
-    # system matrices
-
-    sysStateSpace=ct.ss(A,B,C,D)
-    xd=np.array([[EAmount]])
-
-    K, S, E = ct.lqr(sysStateSpace, Q, R)
-
-    Acl=A-np.matmul(B,K)
-    Bcl=-Acl
+    # Create a power curve that is constant over the DepTime without numpy
+    Power_curve = [P] * num_entries  # constant power over the DepTime
+    Time_vector = []
+    for i in range(num_entries):
+        Time_vector.append(i * time_interval)
     
-    # define the state-space model
-    sysStateSpaceCl=ct.ss(Acl,Bcl,C,D)
-     
-    # define the input for closed-loop simulation
-    inputCL=np.zeros(shape=(1,numberSamples))
-    inputCL[0,:]=xd*np.ones(numberSamples)
-    logger.debug(f"Created input array with {EAmount=} and {numberSamples=}")
-    returnSimulationCL = ct.forced_response(sysStateSpaceCl,
-                                          timeVector,
-                                          inputCL,
-                                          x0)
-   
+    # Create a state of charge progress vector
+    SoC_progress = []
+    for j in range(num_entries):
+        #time elapsed (in hours) times power (in W) gives us the energy in Wh
+        SoC_progress.append((Time_vector[j] /60) * Power_curve[j]) 
 
-    # YC is state of charge of the vehicle (progress to eamount)
-    # UC is power
-    # TC is the timevector
-    Yc = returnSimulationCL.states[0,:]
-    Uc=  np.transpose(-K*(returnSimulationCL.states[0,:]-inputCL))
-    Tc = returnSimulationCL.time
-
-    return Yc, Uc, Tc
-
+    return SoC_progress, [Power_curve], Time_vector
 
 '''
     formatCurveData takes the output of the LQR ChargeCurve below, and formats
