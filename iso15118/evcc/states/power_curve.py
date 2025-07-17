@@ -59,7 +59,7 @@ def formatCurveData(profile_entry_list: list[ProfileEntryDetails]) -> dict:
 
     @author Katie
 '''
-def generate_new_schedule(secc_schedule: list[ProfileEntryDetails], uc: list, tc: list, 
+def generate_new_schedule(secc_schedule: list[ProfileEntryDetails], uc: list, tc: list,
                             departure_time: float, time_elapsed: float) -> list[ProfileEntryDetails]:
     # time_offset = 24 * # max enteries is 24, so refresh every <24 -ish seconds?
     # Define some helper functions...
