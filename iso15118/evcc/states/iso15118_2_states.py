@@ -196,7 +196,6 @@ class ServiceDiscovery(StateEVCC):
             self.stop_state_machine("ChargeService not offered")
             return
 
-        logger.debug("hello -- about to select an auth option?")
         self.select_auth_mode(service_discovery_res.auth_option_list.auth_options)
         await self.select_services(service_discovery_res)
         await self.select_energy_transfer_mode()
