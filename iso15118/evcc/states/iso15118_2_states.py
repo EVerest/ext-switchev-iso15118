@@ -813,7 +813,7 @@ class ChargeParameterDiscovery(StateEVCC):
 
             # If end of profile > end of SECC schedule or no DT (dt==0), end renegotiation...
             departure_time = EVEREST_EV_STATE.DepartureTime
-            if (departure_time is None or self.comm_session.end_of_profile_schedule >= departure_time or 0 == departure_time):
+            if (self.comm_session.end_of_profile_schedule >= departure_time or 0 == departure_time):
                 self.comm_session.end_of_profile_schedule = 86400
 
             EVEREST_CTX.publish('AC_EVPowerReady', True)
