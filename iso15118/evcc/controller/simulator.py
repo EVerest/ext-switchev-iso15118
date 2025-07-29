@@ -298,7 +298,7 @@ class SimEVController(EVControllerInterface):
                 multiplier=0, value=10, unit=UnitSymbol.AMPERE
             )
             ac_charge_params = ACEVChargeParameter(
-                departure_time=EVEREST_EV_STATE.DepartureTime,
+                departure_time=7200,
                 e_amount=e_amount,
                 ev_max_voltage=ev_max_voltage,
                 ev_max_current=ev_max_current,
@@ -309,7 +309,7 @@ class SimEVController(EVControllerInterface):
                 multiplier=1, value=6000, unit=UnitSymbol.WATT_HOURS
             )
             dc_charge_params = DCEVChargeParameter(
-                departure_time=EVEREST_EV_STATE.DepartureTime,
+                departure_time=7200,
                 dc_ev_status=await self.get_dc_ev_status(),
                 ev_maximum_current_limit=self.dc_ev_charge_params.dc_max_current_limit,
                 ev_maximum_power_limit=self.dc_ev_charge_params.dc_max_power_limit,
@@ -425,7 +425,7 @@ class SimEVController(EVControllerInterface):
         )
 
         scheduled_params = ScheduledScheduleExchangeReqParams(
-            departure_time=EVEREST_EV_STATE.DepartureTime,
+            departure_time=7200,
             ev_target_energy_request=RationalNumber(exponent=3, value=10),
             ev_max_energy_request=RationalNumber(exponent=3, value=20),
             ev_min_energy_request=RationalNumber(exponent=-2, value=5),
@@ -439,7 +439,7 @@ class SimEVController(EVControllerInterface):
     ) -> DynamicScheduleExchangeReqParams:
         """Overrides EVControllerInterface.get_dynamic_se_params()."""
         dynamic_params = DynamicScheduleExchangeReqParams(
-            departure_time=EVEREST_EV_STATE.DepartureTime,
+            departure_time=7200,
             min_soc=30,
             target_soc=80,
             ev_target_energy_request=RationalNumber(exponent=3, value=40),
@@ -772,7 +772,7 @@ class SimEVController(EVControllerInterface):
         else:
             # Dynamic Mode
             dynamic_params = DynamicACChargeLoopReqParams(
-                departure_time=EVEREST_EV_STATE.DepartureTime,
+                departure_time=7200,
                 ev_target_energy_request=RationalNumber(exponent=3, value=40),
                 ev_max_energy_request=RationalNumber(exponent=3, value=60),
                 ev_min_energy_request=RationalNumber(exponent=3, value=-20),
@@ -924,7 +924,7 @@ class SimEVController(EVControllerInterface):
             multiplier=1, value=6000, unit=UnitSymbol.WATT_HOURS
         )
         dc_charge_params = DCEVChargeParameter(
-            departure_time=EVEREST_EV_STATE.DepartureTime,
+            departure_time=7200,
             dc_ev_status=await self.get_dc_ev_status(),
             ev_maximum_current_limit=self.dc_ev_discharge_params.dc_max_current_limit,
             ev_maximum_power_limit=self.dc_ev_discharge_params.dc_max_power_limit,
