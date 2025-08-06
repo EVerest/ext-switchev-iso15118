@@ -1363,6 +1363,8 @@ class ACChargeLoop(StateEVCC):
 
         ac_charge_loop_res: ACChargeLoopRes = cast(ACChargeLoopRes, msg)
 
+        await self.publish_target_power(ac_charge_loop_res)
+
         # Before checking if we should continue charging,
         # check if SECC requested a renegotiation.
         # evse_status field in ACChargeLoopRes is optional
@@ -1445,6 +1447,56 @@ class ACChargeLoop(StateEVCC):
             )
         else:
             self.stop_v20_charging(next_state=PowerDelivery)
+
+    async def publish_target_power(self, ac_charge_loop_res: ACChargeLoopRes):
+
+        target_active_power = target_active_power_L2 = target_active_power_L3 = target_reactive_power = target_reactive_power_L2 = target_reactive_power_L3 = None
+
+        if ac_charge_loop_res.scheduled_params is not None:
+            target_active_power = ac_charge_loop_res.scheduled_params.evse_target_active_power
+            target_active_power_L2 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l2
+            target_active_power_L3 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l3
+            target_reactive_power = ac_charge_loop_res.scheduled_params.evse_target_reactive_power
+            target_reactive_power_L2 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l3
+        elif ac_charge_loop_res.bpt_scheduled_params is not None:
+            target_active_power = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power
+            target_active_power_L2 = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power_l2
+            target_active_power_L3 = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power_l3
+            target_reactive_power = ac_charge_loop_res.bpt_scheduled_params.evse_target_reactive_power
+            target_reactive_power_L2 = ac_charge_loop_res.schbpt_scheduled_paramseduled_params.evse_target_active_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power_l3
+        elif ac_charge_loop_res.dynamic_params is not None:
+            target_active_power = ac_charge_loop_res.dynamic_params.evse_target_active_power
+            target_active_power_L2 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l2
+            target_active_power_L3 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l3
+            target_reactive_power = ac_charge_loop_res.dynamic_params.evse_target_reactive_power
+            target_reactive_power_L2 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l3
+        elif ac_charge_loop_res.bpt_dynamic_params is not None:
+            target_active_power = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power
+            target_active_power_L2 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l2
+            target_active_power_L3 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l3
+            target_reactive_power = ac_charge_loop_res.bpt_dynamic_params.evse_target_reactive_power
+            target_reactive_power_L2 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l3
+
+        target_power = dict()
+
+        if target_active_power is not None:
+            target_power["target_active_power"] = target_active_power.get_decimal_value()
+        if target_active_power_L2 is not None:
+            target_power["target_active_power_L2"] = target_active_power_L2.get_decimal_value()
+        if target_active_power_L3 is not None:
+            target_power["target_active_power_L3"] = target_active_power_L3.get_decimal_value()
+        if target_reactive_power is not None:
+            target_power["target_reactive_power"] = target_reactive_power.get_decimal_value()
+        if target_reactive_power_L2 is not None:
+            target_power["target_reactive_power_L2"] = target_reactive_power_L2.get_decimal_value()
+        if target_reactive_power_L3 is not None:
+            target_power["target_reactive_power_L3"] = target_reactive_power_L3.get_decimal_value()
+
+        EVEREST_CTX.publish('ac_evse_target_power', target_power)
 
 
 # ============================================================================
