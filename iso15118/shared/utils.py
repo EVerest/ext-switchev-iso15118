@@ -15,8 +15,14 @@ logger = logging.getLogger(__name__)
 def _format_list(read_settings: List[str]) -> List[str]:
     read_settings = list(filter(None, read_settings))
     read_settings = [setting.strip().upper() for setting in read_settings]
-    read_settings_set = set(read_settings)
-    return [setting for setting in read_settings if setting in read_settings_set]
+
+    output = []
+    for setting in read_settings:
+        if setting in output:
+            continue
+        output.append(setting)
+
+    return output
 
 
 def load_requested_protocols(read_protocols: Optional[List[str]]) -> List[Protocol]:
