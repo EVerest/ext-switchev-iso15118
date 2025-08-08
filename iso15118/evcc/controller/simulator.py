@@ -580,7 +580,7 @@ class SimEVController(EVControllerInterface):
         self, sa_schedules: List[SAScheduleTuple]
     ) -> Tuple[ChargeProgressV2, int, ChargingProfile]:
         """Overrides EVControllerInterface.process_sa_schedules()."""
-        secc_schedule = sa_schedules.pop()
+        secc_schedule = sa_schedules.pop(0)  #[V2G2-297]
         evcc_profile_entry_list: List[ProfileEntryDetails] = []
 
         # The charging schedule coming from the SECC is called 'schedule', the

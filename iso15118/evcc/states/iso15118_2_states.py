@@ -802,9 +802,9 @@ class ChargeParameterDiscovery(StateEVCC):
             #      if e.g. EVSENotification is set to STOP_CHARGING or if RCD
             #      is True. But let's do that after the testival
 
-            if self.comm_session.service_hpc1_active:
-                if len(charge_params_res.sa_schedule_list) > 2:
+            if self.comm_session.service_hpc1_active and len(charge_params_res.sa_schedule_list) > 2:
                     charge_params_res.sa_schedule_list = charge_params_res.sa_schedule_list[:2]  # [V2G2-PnC-CharIN-017]
+
             (
                 charge_progress,
                 schedule_id,
@@ -882,7 +882,7 @@ class ChargeParameterDiscovery(StateEVCC):
             )
 
             if await self.comm_session.ev_controller.is_service_hpc1_active():
-                charge_parameter_discovery_req.max_entries_sa_schedule_tuple = None
+                charge_parameter_discovery_req.max_entries_sa_schedule_tuple = None  #[V2G2-PnC-CharIN-018]
 
             self.create_next_message(
                 ChargeParameterDiscovery,
@@ -944,6 +944,11 @@ class PowerDelivery(StateEVCC):
                 Namespace.ISO_V2_MSG_DEF,
             )
         elif self.comm_session.renegotiation_requested and not await self.comm_session.ev_controller.is_service_hpc1_active():
+            # In HPC1, the EVSE and the EV do not use the renegotiation mechanism.
+            # [V2G2-PnC-CharIN-016] If the SECC sent the ServiceID service
+            # 63000, Service Name and ServiceCategory for HPC1 as
+            # defined in Table 105 it shall not use EVSENotification =
+            # Renegotiate.
             self.comm_session.renegotiation_requested = False
 
             charge_params = await self.comm_session.ev_controller.get_charge_params_v2(
@@ -1231,7 +1236,7 @@ class ChargingStatus(StateEVCC):
                     f"MeteringReceiptReq: {exc}"
                 )
                 return
-        elif ac_evse_status.evse_notification == EVSENotification.RE_NEGOTIATION and not self.comm_session.service_hpc1_active:
+        elif ac_evse_status.evse_notification == EVSENotification.RE_NEGOTIATION:
             self.comm_session.renegotiation_requested = True
             power_delivery_req = PowerDeliveryReq(
                 charge_progress=ChargeProgress.RENEGOTIATE,
