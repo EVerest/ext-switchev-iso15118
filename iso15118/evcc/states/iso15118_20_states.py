@@ -1369,7 +1369,9 @@ class ACChargeLoop(StateEVCC):
         if ac_charge_loop_res.evse_status:
             renegotiation = False
             evse_notification = ac_charge_loop_res.evse_status.evse_notification
+            pause = False
             if evse_notification not in [
+                EVSENotification.PAUSE,
                 EVSENotification.SERVICE_RENEGOTIATION,
                 EVSENotification.TERMINATE,
             ]:
@@ -1380,13 +1382,20 @@ class ACChargeLoop(StateEVCC):
                 )
             if evse_notification == EVSENotification.SERVICE_RENEGOTIATION:
                 renegotiation = True
-
-            EVEREST_CTX.publish('stop_from_charger', None)
+            elif evse_notification == EVSENotification.PAUSE:
+                pause = True
+                EVEREST_CTX.publish('pause_from_charger', None)
+            else:
+                EVEREST_CTX.publish("stop_from_charger", None)
 
             self.stop_v20_charging(
-                next_state=PowerDelivery, renegotiate_requested=renegotiation
+                next_state=PowerDelivery, renegotiate_requested=renegotiation, pause=pause
             )
-
+        # TODO(sl): Check if dynamic mode is active and the ev wants to do a pause
+        elif await self.comm_session.ev_controller.pause():
+            self.stop_v20_charging(
+                next_state=PowerDelivery, renegotiate_requested=False, pause=True
+            )
         elif await self.comm_session.ev_controller.continue_charging():
             scheduled_params, dynamic_params = None, None
             bpt_scheduled_params, bpt_dynamic_params = None, None
