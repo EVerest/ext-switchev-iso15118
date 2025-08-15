@@ -251,11 +251,22 @@ class SimEVController(EVControllerInterface):
         self, services: List[MatchedService]
     ) -> SelectedEnergyService:
         """Overrides EVControllerInterface.select_energy_service_v20()."""
-        top_of_list: MatchedService = services[0]
+        prioritized_supported_list = self.config.supported_energy_services
+
+        # find first match that is one of the first in the supported list
+        selected_match = None
+        for service in prioritized_supported_list:
+            for matched_service in services:
+                if service == matched_service.service:
+                    selected_match = matched_service
+                    break
+            if selected_match is not None:
+                break
+
         selected_service = SelectedEnergyService(
-            service=top_of_list.service,
-            is_free=top_of_list.is_free,
-            parameter_set=top_of_list.parameter_sets[0],
+            service=selected_match.service,
+            is_free=selected_match.is_free,
+            parameter_set=selected_match.parameter_sets[0],
         )
         return selected_service
 
