@@ -344,8 +344,17 @@ class ServiceDiscovery(StateEVCC):
                 )
                 self.comm_session.sae_j2847_active = service.service_id
 
-            # Request more service details if you're interested in e.g.
-            # an Internet service or a use case-specific service
+            # check if service HPC1 is offered
+            if (service.service_category == ServiceCategory.CUSTOM
+                    and await self.comm_session.ev_controller.is_service_hpc1_active() == True
+                    and service.service_id == 63000):
+                self.comm_session.selected_services.append(
+                    SelectedService(service_id=service.service_id)
+                )
+                self.comm_session.service_hpc1_active = True
+
+        # Request more service details if you're interested in e.g.
+        # an Internet service or a use case-specific service
 
         logger.debug(f"Offered value-added services: {offered_services}")
 
@@ -793,6 +802,9 @@ class ChargeParameterDiscovery(StateEVCC):
             #      if e.g. EVSENotification is set to STOP_CHARGING or if RCD
             #      is True. But let's do that after the testival
 
+            if self.comm_session.service_hpc1_active and len(charge_params_res.sa_schedule_list) > 2:
+                    charge_params_res.sa_schedule_list = charge_params_res.sa_schedule_list[:2]  # [V2G2-PnC-CharIN-017]
+
             (
                 charge_progress,
                 schedule_id,
@@ -830,7 +842,10 @@ class ChargeParameterDiscovery(StateEVCC):
                     Namespace.ISO_V2_MSG_DEF,
                 )
 
-            self.comm_session.selected_schedule = schedule_id
+            if await self.comm_session.ev_controller.is_service_hpc1_active():
+                self.comm_session.selected_schedule = charge_params_res.sa_schedule_list.schedule_tuples[0].sa_schedule_tuple_id  # [V2G2-PnC-CharIN-036]
+            else:
+                self.comm_session.selected_schedule = schedule_id
 
             await self.comm_session.ev_controller.enable_charging(True)
         else:
@@ -865,6 +880,9 @@ class ChargeParameterDiscovery(StateEVCC):
                 ac_ev_charge_parameter=charge_params.ac_parameters,
                 dc_ev_charge_parameter=charge_params.dc_parameters,
             )
+
+            if await self.comm_session.ev_controller.is_service_hpc1_active():
+                charge_parameter_discovery_req.max_entries_sa_schedule_tuple = None  #[V2G2-PnC-CharIN-018]
 
             self.create_next_message(
                 ChargeParameterDiscovery,
@@ -925,7 +943,12 @@ class PowerDelivery(StateEVCC):
                 Timeouts.WELDING_DETECTION_REQ,
                 Namespace.ISO_V2_MSG_DEF,
             )
-        elif self.comm_session.renegotiation_requested:
+        elif self.comm_session.renegotiation_requested and not await self.comm_session.ev_controller.is_service_hpc1_active():
+            # In HPC1, the EVSE and the EV do not use the renegotiation mechanism.
+            # [V2G2-PnC-CharIN-016] If the SECC sent the ServiceID service
+            # 63000, Service Name and ServiceCategory for HPC1 as
+            # defined in Table 105 it shall not use EVSENotification =
+            # Renegotiate.
             self.comm_session.renegotiation_requested = False
 
             charge_params = await self.comm_session.ev_controller.get_charge_params_v2(
@@ -1040,7 +1063,7 @@ class MeteringReceipt(StateEVCC):
                 Timeouts.POWER_DELIVERY_REQ,
                 Namespace.ISO_V2_MSG_DEF,
             )
-        elif notification == EVSENotification.RE_NEGOTIATION:
+        elif notification == EVSENotification.RE_NEGOTIATION and not await self.comm_session.ev_controller.is_service_hpc1_active():
             logger.debug("SECC requested a renegotiation")
             self.comm_session.renegotiation_requested = True
             self.create_next_message(
