@@ -36,14 +36,6 @@ def deptime_linear(DepTime: float, EAmount: float, PMax: float) -> tuple[list,li
 
 
 '''
- Check notice on line 38 in iso15118/evcc/states/power_curve.py
-
-
-Codacy Production
-/ Codacy Static Code Analysis
-iso15118/evcc/states/power_curve.py#L38
-
-String statement has no effect
     formatCurveData takes the output of the charge curve calculation, and formats
     it into a JSON string that will be accepted by Node-RED's `chart`
     module.
