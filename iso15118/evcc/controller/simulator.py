@@ -616,7 +616,7 @@ class SimEVController(EVControllerInterface):
                 )
                 evcc_profile_entry_list.append(last_profile_entry_details)
 
-                # Set Curve Variables...
+        # Set Curve Variables...
         logger.debug("About to handle pmax schedule %s" % secc_schedule.p_max_schedule.schedule_entries[0])
         p_max = secc_schedule.p_max_schedule.schedule_entries[0].p_max
         pmax:float = p_max.value * pow(10, p_max.multiplier)
