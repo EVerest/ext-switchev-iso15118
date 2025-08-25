@@ -815,7 +815,6 @@ class ChargeParameterDiscovery(StateEVCC):
                 self.comm_session.end_of_profile_schedule = 86400
 
             EVEREST_CTX.publish('ev_power_ready', True)
-            EVEREST_CTX.publish('AC_EVPowerReady', True)
             # EVerest code end #
             await self.comm_session.ev_controller.enable_charging(True)
             if self.comm_session.selected_charging_type_is_ac:
