@@ -9,7 +9,6 @@ from time import time
 from typing import Any, List, Union
 import os
 
-from iso15118.evcc.everest import context as EVEREST_CONTEXT
 from iso15118.evcc import evcc_settings
 from iso15118.evcc.comm_session_handler import EVCCCommunicationSession
 from iso15118.evcc.states.evcc_state import StateEVCC
@@ -114,10 +113,9 @@ from iso15118.shared.settings import get_PKI_PATH
 
 logger = logging.getLogger(__name__)
 
-EVEREST_EV_STATE = EVEREST_CONTEXT.ev_state
-
 # *** EVerest code start ***
 from iso15118.evcc.everest import context as EVEREST_CTX
+EVEREST_EV_STATE = EVEREST_CTX.ev_state
 # *** EVerest code end ***
 
 # ============================================================================
