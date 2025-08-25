@@ -1363,13 +1363,17 @@ class ACChargeLoop(StateEVCC):
 
         ac_charge_loop_res: ACChargeLoopRes = cast(ACChargeLoopRes, msg)
 
+        await self.publish_target_power(ac_charge_loop_res)
+
         # Before checking if we should continue charging,
         # check if SECC requested a renegotiation.
         # evse_status field in ACChargeLoopRes is optional
         if ac_charge_loop_res.evse_status:
             renegotiation = False
             evse_notification = ac_charge_loop_res.evse_status.evse_notification
+            pause = False
             if evse_notification not in [
+                EVSENotification.PAUSE,
                 EVSENotification.SERVICE_RENEGOTIATION,
                 EVSENotification.TERMINATE,
             ]:
@@ -1380,13 +1384,20 @@ class ACChargeLoop(StateEVCC):
                 )
             if evse_notification == EVSENotification.SERVICE_RENEGOTIATION:
                 renegotiation = True
-
-            EVEREST_CTX.publish('stop_from_charger', None)
+            elif evse_notification == EVSENotification.PAUSE:
+                pause = True
+                EVEREST_CTX.publish('pause_from_charger', None)
+            else:
+                EVEREST_CTX.publish("stop_from_charger", None)
 
             self.stop_v20_charging(
-                next_state=PowerDelivery, renegotiate_requested=renegotiation
+                next_state=PowerDelivery, renegotiate_requested=renegotiation, pause=pause
             )
-
+        # TODO(sl): Check if dynamic mode is active and the ev wants to do a pause
+        elif await self.comm_session.ev_controller.pause():
+            self.stop_v20_charging(
+                next_state=PowerDelivery, renegotiate_requested=False, pause=True
+            )
         elif await self.comm_session.ev_controller.continue_charging():
             scheduled_params, dynamic_params = None, None
             bpt_scheduled_params, bpt_dynamic_params = None, None
@@ -1445,6 +1456,56 @@ class ACChargeLoop(StateEVCC):
             )
         else:
             self.stop_v20_charging(next_state=PowerDelivery)
+
+    async def publish_target_power(self, ac_charge_loop_res: ACChargeLoopRes):
+
+        target_active_power = target_active_power_L2 = target_active_power_L3 = target_reactive_power = target_reactive_power_L2 = target_reactive_power_L3 = None
+
+        if ac_charge_loop_res.scheduled_params is not None:
+            target_active_power = ac_charge_loop_res.scheduled_params.evse_target_active_power
+            target_active_power_L2 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l2
+            target_active_power_L3 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l3
+            target_reactive_power = ac_charge_loop_res.scheduled_params.evse_target_reactive_power
+            target_reactive_power_L2 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l3
+        elif ac_charge_loop_res.bpt_scheduled_params is not None:
+            target_active_power = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power
+            target_active_power_L2 = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power_l2
+            target_active_power_L3 = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power_l3
+            target_reactive_power = ac_charge_loop_res.bpt_scheduled_params.evse_target_reactive_power
+            target_reactive_power_L2 = ac_charge_loop_res.schbpt_scheduled_paramseduled_params.evse_target_active_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power_l3
+        elif ac_charge_loop_res.dynamic_params is not None:
+            target_active_power = ac_charge_loop_res.dynamic_params.evse_target_active_power
+            target_active_power_L2 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l2
+            target_active_power_L3 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l3
+            target_reactive_power = ac_charge_loop_res.dynamic_params.evse_target_reactive_power
+            target_reactive_power_L2 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l3
+        elif ac_charge_loop_res.bpt_dynamic_params is not None:
+            target_active_power = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power
+            target_active_power_L2 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l2
+            target_active_power_L3 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l3
+            target_reactive_power = ac_charge_loop_res.bpt_dynamic_params.evse_target_reactive_power
+            target_reactive_power_L2 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l3
+
+        target_power = dict()
+
+        if target_active_power is not None:
+            target_power["target_active_power"] = target_active_power.get_decimal_value()
+        if target_active_power_L2 is not None:
+            target_power["target_active_power_L2"] = target_active_power_L2.get_decimal_value()
+        if target_active_power_L3 is not None:
+            target_power["target_active_power_L3"] = target_active_power_L3.get_decimal_value()
+        if target_reactive_power is not None:
+            target_power["target_reactive_power"] = target_reactive_power.get_decimal_value()
+        if target_reactive_power_L2 is not None:
+            target_power["target_reactive_power_L2"] = target_reactive_power_L2.get_decimal_value()
+        if target_reactive_power_L3 is not None:
+            target_power["target_reactive_power_L3"] = target_reactive_power_L3.get_decimal_value()
+
+        EVEREST_CTX.publish('ac_evse_target_power', target_power)
 
 
 # ============================================================================

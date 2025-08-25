@@ -15,8 +15,14 @@ logger = logging.getLogger(__name__)
 def _format_list(read_settings: List[str]) -> List[str]:
     read_settings = list(filter(None, read_settings))
     read_settings = [setting.strip().upper() for setting in read_settings]
-    read_settings = list(set(read_settings))
-    return read_settings
+
+    output = []
+    for setting in read_settings:
+        if setting in output:
+            continue
+        output.append(setting)
+
+    return output
 
 
 def load_requested_protocols(read_protocols: Optional[List[str]]) -> List[Protocol]:
@@ -56,7 +62,9 @@ def load_requested_energy_services(
     ]
 
     services = _format_list(read_services)
-    valid_services = list(set(services).intersection(supported_services))
+    valid_services = [
+        service for service in services if service in supported_services
+    ]
     if not valid_services:
         raise NoSupportedEnergyServices(
             f"No supported energy services configured. Supported energy services are "
