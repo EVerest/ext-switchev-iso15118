@@ -1183,7 +1183,6 @@ class ChargingStatus(StateEVCC):
         # EVerest code start #
         if charging_status_res.evse_max_current:
             evse_max_current = charging_status_res.evse_max_current.value * pow(10, charging_status_res.evse_max_current.multiplier)
-            EVEREST_CTX.publish('AC_EVSEMaxCurrent', evse_max_current)
 
             time_elapsed = (time() - self.comm_session.charging_session_timer)
             logger.debug(f'End Of Schedule:: {self.comm_session.end_of_profile_schedule}')
