@@ -16,6 +16,7 @@ class EVState:
     EnergyTransferMode: str = ''
     StopCharging = False
     Pause = False
+    internet_service_needed = False
 
     # DC
     dc_max_current_limit: float = DEFAULT_DC_MAX_CURRENT_LIMIT_A

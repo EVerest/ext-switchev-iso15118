@@ -552,6 +552,9 @@ class SimEVController(EVControllerInterface):
         else:
             return False
 
+    async def is_internet_service_needed(self) -> bool:
+        return EVEREST_EV_STATE.internet_service_needed
+
     async def process_sa_schedules_dinspec(
         self, sa_schedules: List[SAScheduleTupleEntryDINSPEC]
     ) -> int:

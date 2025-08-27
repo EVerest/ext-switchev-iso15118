@@ -344,6 +344,11 @@ class ServiceDiscovery(StateEVCC):
                 )
                 self.comm_session.sae_j2847_active = service.service_id
 
+            if (
+                service.service_category == ServiceCategory.INTERNET
+                and await self.comm_session.ev_controller.is_internet_service_needed()
+            ):
+                self.comm_session.service_details_to_request.append(service.service_id)
             # Request more service details if you're interested in e.g.
             # an Internet service or a use case-specific service
 
@@ -374,7 +379,17 @@ class ServiceDetail(StateEVCC):
         if not msg:
             return
 
-        # service_detail_res: ServiceDetailRes = msg.body.service_detail_res
+        service_detail_res: ServiceDetailRes = msg.body.service_detail_res
+        if service_detail_res.service_id == ServiceID.INTERNET:
+            for parameter_set in service_detail_res.service_parameter_list.parameter_set:
+                if parameter_set.parameter_set_id == 3:
+                    self.comm_session.selected_services.append(
+                        SelectedService(service_id=ServiceID.INTERNET, parameter_set_id=3)
+                    )
+                elif parameter_set.parameter_set_id == 4:
+                    self.comm_session.selected_services.append(
+                        SelectedService(service_id=ServiceID.INTERNET, parameter_set_id=4)
+                    )
 
         # If you want to further evaluate the service details, then do so here
         # TODO Make sure to check the parameter list and add the certificate
