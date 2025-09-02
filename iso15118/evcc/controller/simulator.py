@@ -636,7 +636,8 @@ class SimEVController(EVControllerInterface):
         if (time_elapsed  > departure_time):
             logger.debug("End of Profile! Defaulting to EVCC profile enteries")
         else:
-            eamount = EVEREST_EV_STATE.EAmount
+            eamount = PVEAmount(multiplier=3, value=EVEREST_EV_STATE.EAmount,
+                                 unit=UnitSymbol.WATT_HOURS)
             power_draw_progress, power_draw, time_vector = deptime_linear(departure_time, eamount, pmax)
             logger.debug(f"About to generate a new schedule with a EVCC_Profile {evcc_profile_entry_list}")
             new_schedule = generate_new_schedule(evcc_profile_entry_list, power_draw, time_vector, departure_time, time_elapsed)
