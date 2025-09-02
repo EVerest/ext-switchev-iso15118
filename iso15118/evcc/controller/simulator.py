@@ -299,7 +299,7 @@ class SimEVController(EVControllerInterface):
         dc_charge_params = None
 
         if (await self.get_energy_transfer_mode(protocol)).startswith("AC"):
-            e_amount = PVEAmount(multiplier=3, value=EVEREST_EV_STATE.EAmount,
+            e_amount = PVEAmount(multiplier=3, value=EVEREST_EV_STATE.EAmount_kWh,
                                  unit=UnitSymbol.WATT_HOURS)
             ev_max_voltage = PVEVMaxVoltage(
                 multiplier=0, value=400, unit=UnitSymbol.VOLTAGE
@@ -636,7 +636,7 @@ class SimEVController(EVControllerInterface):
         if (time_elapsed  > departure_time):
             logger.debug("End of Profile! Defaulting to EVCC profile enteries")
         else:
-            eamount = PVEAmount(multiplier=3, value=EVEREST_EV_STATE.EAmount,
+            eamount = PVEAmount(multiplier=3, value=EVEREST_EV_STATE.EAmount_kWh,
                                  unit=UnitSymbol.WATT_HOURS)
             power_draw_progress, power_draw, time_vector = deptime_linear(departure_time, eamount, pmax)
             logger.debug(f"About to generate a new schedule with a EVCC_Profile {evcc_profile_entry_list}")
