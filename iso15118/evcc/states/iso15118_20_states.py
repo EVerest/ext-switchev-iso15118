@@ -1466,29 +1466,29 @@ class ACChargeLoop(StateEVCC):
             target_active_power_L2 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l2
             target_active_power_L3 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l3
             target_reactive_power = ac_charge_loop_res.scheduled_params.evse_target_reactive_power
-            target_reactive_power_L2 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l2
-            target_reactive_power_L3 = ac_charge_loop_res.scheduled_params.evse_target_active_power_l3
+            target_reactive_power_L2 = ac_charge_loop_res.scheduled_params.evse_target_reactive_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.scheduled_params.evse_target_reactive_power_l3
         elif ac_charge_loop_res.bpt_scheduled_params is not None:
             target_active_power = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power
             target_active_power_L2 = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power_l2
             target_active_power_L3 = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power_l3
             target_reactive_power = ac_charge_loop_res.bpt_scheduled_params.evse_target_reactive_power
-            target_reactive_power_L2 = ac_charge_loop_res.schbpt_scheduled_paramseduled_params.evse_target_active_power_l2
-            target_reactive_power_L3 = ac_charge_loop_res.bpt_scheduled_params.evse_target_active_power_l3
+            target_reactive_power_L2 = ac_charge_loop_res.bpt_scheduled_params.evse_target_reactive_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.bpt_scheduled_params.evse_target_reactive_power_l3
         elif ac_charge_loop_res.dynamic_params is not None:
             target_active_power = ac_charge_loop_res.dynamic_params.evse_target_active_power
             target_active_power_L2 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l2
             target_active_power_L3 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l3
             target_reactive_power = ac_charge_loop_res.dynamic_params.evse_target_reactive_power
-            target_reactive_power_L2 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l2
-            target_reactive_power_L3 = ac_charge_loop_res.dynamic_params.evse_target_active_power_l3
+            target_reactive_power_L2 = ac_charge_loop_res.dynamic_params.evse_target_reactive_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.dynamic_params.evse_target_reactive_power_l3
         elif ac_charge_loop_res.bpt_dynamic_params is not None:
             target_active_power = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power
             target_active_power_L2 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l2
             target_active_power_L3 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l3
             target_reactive_power = ac_charge_loop_res.bpt_dynamic_params.evse_target_reactive_power
-            target_reactive_power_L2 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l2
-            target_reactive_power_L3 = ac_charge_loop_res.bpt_dynamic_params.evse_target_active_power_l3
+            target_reactive_power_L2 = ac_charge_loop_res.bpt_dynamic_params.evse_target_reactive_power_l2
+            target_reactive_power_L3 = ac_charge_loop_res.bpt_dynamic_params.evse_target_reactive_power_l3
 
         target_power = dict()
 
