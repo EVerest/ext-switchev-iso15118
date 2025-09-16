@@ -1,5 +1,10 @@
 from iso15118.shared.messages.iso15118_2.datatypes import ProfileEntryDetails
 from iso15118.shared.messages.datatypes import PVPMax
+
+from iso15118.shared.messages.datatypes import (
+    PVPMax,
+    PVEAmount,
+)
 from iso15118.shared.messages.enums import UnitSymbol
 import logging
 
@@ -8,7 +13,7 @@ logger = logging.getLogger(__name__)
     deptime_linear is used to generate a linear power curve
     for a given departure time, energy amount, and maximum power.
 '''
-def deptime_linear(DepTime: float, EAmount: float, PMax: float) -> tuple[list,list,list]:
+def deptime_linear(DepTime: float, EAmount: PVEAmount, PMax: float) -> tuple[list,list,list]:
     # to distribute power linearly during the requested time
     # DT is in minutes
     # EAmount is in Wh
