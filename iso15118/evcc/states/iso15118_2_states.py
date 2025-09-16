@@ -1180,6 +1180,7 @@ class ChargingStatus(StateEVCC):
         ac_evse_status: ACEVSEStatus = charging_status_res.ac_evse_status
 
         # EVerest code start #
+        is_end_of_profile = False
         if charging_status_res.evse_max_current:
             evse_max_current = charging_status_res.evse_max_current.value * pow(10, charging_status_res.evse_max_current.multiplier)
 
