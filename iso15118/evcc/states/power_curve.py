@@ -1,7 +1,5 @@
 from iso15118.shared.messages.iso15118_2.datatypes import ProfileEntryDetails
 from iso15118.shared.messages.datatypes import PVPMax
-
-from iso15118.shared.messages.datatypes import PVPMax
 from iso15118.shared.messages.enums import UnitSymbol
 import logging
 
