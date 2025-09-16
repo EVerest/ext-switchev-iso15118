@@ -311,7 +311,7 @@ class SimEVController(EVControllerInterface):
                 multiplier=0, value=10, unit=UnitSymbol.AMPERE
             )
             ac_charge_params = ACEVChargeParameter(
-                departure_time=7200,
+                departure_time=EVEREST_EV_STATE.DepartureTime,
                 e_amount=e_amount,
                 ev_max_voltage=ev_max_voltage,
                 ev_max_current=ev_max_current,
@@ -322,7 +322,7 @@ class SimEVController(EVControllerInterface):
                 multiplier=1, value=6000, unit=UnitSymbol.WATT_HOURS
             )
             dc_charge_params = DCEVChargeParameter(
-                departure_time=7200,
+                departure_time=EVEREST_EV_STATE.DepartureTime,
                 dc_ev_status=await self.get_dc_ev_status(),
                 ev_maximum_current_limit=self.dc_ev_charge_params.dc_max_current_limit,
                 ev_maximum_power_limit=self.dc_ev_charge_params.dc_max_power_limit,
