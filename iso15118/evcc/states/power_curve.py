@@ -73,15 +73,12 @@ def generate_new_schedule(secc_schedule: list[ProfileEntryDetails], uc: list, tc
 
     # Generates a ProfileEntryDetails obj for the final schedule
     def make_entry(val: float, timestamp: float, next_ts: float) -> ProfileEntryDetails:
-        # First, convert kWh to kW
-        time_delta = (float(next_ts) - float(timestamp)) / 3600
-        watts = (1000 * val) / time_delta
-        # Then, create the ProfileEntryDetails...
+        # Create the ProfileEntryDetails...
         return  ProfileEntryDetails(
             start=int(timestamp),
             max_power=PVPMax(
                 multiplier=0,
-                value=watts, # Convert miliwattsHours to WattHours
+                value=val, # Convert miliwattsHours to WattHours
                 unit=UnitSymbol.WATT
             ),
             max_phases_in_use = None
@@ -97,7 +94,7 @@ def generate_new_schedule(secc_schedule: list[ProfileEntryDetails], uc: list, tc
 
         return (schedule_arr)
 
-    curve_schedule = [(x[0],y) for x, y, in zip(uc, tc)] # UC is in kWh, not kW
+    curve_schedule = [(x,y) for x, y, in zip(uc[0], tc)]
     # We get 24 from ISO 15118-2, Table 71.  This is the max number of profile enteries.
     # For some reason, EVerest only accepts 23... Investigate later
     curve_schedule = sample_schedule(curve_schedule)
