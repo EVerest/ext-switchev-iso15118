@@ -288,7 +288,7 @@ class ServiceDiscovery(StateEVCC):
                 )
             )
             logger.warn("V2G_PAYMENT: in function read value from state %s" % self.comm_session.selected_auth_option)
-            if self.comm_session.selected_auth_option is not None:
+            if (self.comm_session.selected_auth_option is not None) and (self.comm_session.selected_auth_option != "auto"):
                 logger.debug(
                         "V2G_PAYMENT: Found Payment Option %s passed in from the PyJoseV module, using it" % self.comm_session.selected_auth_option
                 )
