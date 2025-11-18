@@ -560,6 +560,12 @@ class SimEVController(EVControllerInterface):
     async def is_internet_service_needed(self) -> bool:
         return EVEREST_EV_STATE.internet_service_needed
 
+    async def request_all_service_details(self) -> bool:
+        return EVEREST_EV_STATE.all_service_details
+
+    async def select_all_vas_services(self) -> bool:
+        return EVEREST_EV_STATE.all_vas_services
+
     async def process_sa_schedules_dinspec(
         self, sa_schedules: List[SAScheduleTupleEntryDINSPEC]
     ) -> int:
@@ -669,7 +675,7 @@ class SimEVController(EVControllerInterface):
         #     # await asyncio.sleep(0.5)
         #     return True
         return not EVEREST_EV_STATE.StopCharging
-    
+
     async def pause(self) -> bool:
         return EVEREST_EV_STATE.Pause
 

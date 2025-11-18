@@ -345,13 +345,24 @@ class ServiceDiscovery(StateEVCC):
                 )
                 self.comm_session.sae_j2847_active = service.service_id
 
+            # Request more service details if you're interested in e.g.
+            # an Internet service or a use case-specific service
             if (
                 service.service_category == ServiceCategory.INTERNET
                 and await self.comm_session.ev_controller.is_internet_service_needed()
             ):
                 self.comm_session.service_details_to_request.append(service.service_id)
-            # Request more service details if you're interested in e.g.
-            # an Internet service or a use case-specific service
+            if (
+                service.service_category == ServiceCategory.CUSTOM
+                and await self.comm_session.ev_controller.request_all_service_details()
+            ):
+                self.comm_session.service_details_to_request.append(service.service_id)
+
+                if await self.comm_session.ev_controller.select_all_vas_services():
+                    self.comm_session.selected_services.append(
+                        SelectedService(service_id=service.service_id)
+                    )
+
 
         logger.debug(f"Offered value-added services: {offered_services}")
 
@@ -999,7 +1010,7 @@ class PowerDelivery(StateEVCC):
             dc_ev_charge_params = (
                 await self.comm_session.ev_controller.get_dc_discharge_params()
             )
-        else: 
+        else:
             dc_ev_charge_params = (
                 await self.comm_session.ev_controller.get_dc_charge_params()
             )
@@ -1524,8 +1535,8 @@ class CurrentDemand(StateEVCC):
                     await ev_controller.get_dc_charge_params()
                 )
         # Todo(sl): trigger via node-red bpt and normal charging
-            
-        else: 
+
+        else:
             dc_ev_charge_params = (
                 await ev_controller.get_dc_charge_params()
             )

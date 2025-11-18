@@ -19,6 +19,8 @@ class EVState:
     StopCharging = False
     Pause = False
     internet_service_needed = False
+    all_service_details = False
+    all_vas_services = False
 
     # DC
     dc_max_current_limit: float = DEFAULT_DC_MAX_CURRENT_LIMIT_A
