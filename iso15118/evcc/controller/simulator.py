@@ -53,6 +53,7 @@ from iso15118.shared.messages.din_spec.datatypes import (
     SAScheduleTupleEntry as SAScheduleTupleEntryDINSPEC,
 )
 from iso15118.shared.messages.enums import (
+    AuthEnum,
     ControlMode,
     DCEVErrorCode,
     EnergyTransferModeEnum,
@@ -241,6 +242,14 @@ class SimEVController(EVControllerInterface):
         else:
             logger.error(f"Invalid protocol '{protocol}', can't determine EVCCID")
             raise InvalidProtocolError
+
+    async def get_selected_auth_option(self) -> (Optional[AuthEnum], Optional[bool]):
+        selected_payment_option: Optional[AuthEnum] = None
+
+        if EVEREST_EV_STATE.PaymentOption:
+            selected_payment_option = AuthEnum(EVEREST_EV_STATE.PaymentOption)
+
+        return selected_payment_option, EVEREST_EV_STATE.enforce_payment_option
 
     async def get_energy_transfer_mode(
         self, protocol: Protocol

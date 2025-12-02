@@ -194,7 +194,7 @@ class ServiceDiscovery(StateEVCC):
             self.stop_state_machine("ChargeService not offered")
             return
 
-        self.select_auth_mode(service_discovery_res.auth_option_list.auth_options)
+        await self.select_auth_mode(service_discovery_res.auth_option_list.auth_options)
         await self.select_services(service_discovery_res)
         await self.select_energy_transfer_mode()
 
@@ -263,7 +263,7 @@ class ServiceDiscovery(StateEVCC):
             self.comm_session.selected_energy_mode.value.startswith("AC")
         )
 
-    def select_auth_mode(self, auth_option_list: List[AuthEnum]):
+    async def select_auth_mode(self, auth_option_list: List[AuthEnum]):
         """
         Check if an authorization mode (aka payment option in ISO 15118-2) was
         saved from a previously paused communication session and reuse for
@@ -285,6 +285,19 @@ class ServiceDiscovery(StateEVCC):
             # have a mechanism to determine a user-defined or default
             # authorization option. This implementation favors pnc, but
             # feel free to change if need be.
+
+            payment_option, enforce_payment_option = await self.comm_session.ev_controller.get_selected_auth_option()
+
+            if (
+                payment_option is not None
+                and enforce_payment_option is not None
+                and (
+                    enforce_payment_option is True or payment_option in auth_option_list
+                )
+            ):
+                self.comm_session.selected_auth_option = payment_option
+                return
+
             if AuthEnum.PNC_V2 in auth_option_list and self.comm_session.is_tls:
                 self.comm_session.selected_auth_option = AuthEnum.PNC_V2
             else:

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2020 - 2023 Pionix GmbH and Contributors to EVerest
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Optional
 
 DEFAULT_DC_MAX_CURRENT_LIMIT_A = 300
 DEFAULT_DC_MAX_POWER_LIMIT_W = 150000
@@ -12,7 +13,8 @@ DEFAULT_TARGET_VOLTAGE_V = 200
 @dataclass
 class EVState:
     # Common
-    PaymentOption: str = ''
+    PaymentOption: Optional[str] = None
+    enforce_payment_option: Optional[bool] = None
     EAmount_kWh: int = 60
     DepartureTime: int = 7200
     EnergyTransferMode: str = ''
