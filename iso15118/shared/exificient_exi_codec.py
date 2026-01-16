@@ -21,7 +21,7 @@ class ExificientEXICodec(IEXICodec):
         logging.getLogger("py4j").setLevel(logging.CRITICAL)
         self.gateway = JavaGateway.launch_gateway(
             classpath=JAR_FILE_PATH,
-            die_on_exit=True,
+            die_on_exit=False,
             javaopts=["--add-opens", "java.base/java.lang=ALL-UNNAMED"],
         )
 
@@ -55,3 +55,9 @@ class ExificientEXICodec(IEXICodec):
         Returns the version of the Exificient codec
         """
         return self.exi_codec.get_version()
+
+    def shutdown(self):
+        """
+        Shutdown the java gateway manually
+        """
+        self.gateway.shutdown()
