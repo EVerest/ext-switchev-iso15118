@@ -51,32 +51,32 @@ static protocol_t get_protocol(const char* namespace) {
         return PROTOCOL_UNKNOWN;
     }
 
-    if (strcmp(namespace, NS_SAP) == 0) {
+    if (strncmp(namespace, NS_SAP, sizeof(NS_SAP)) == 0) {
         return PROTOCOL_SAP;
     }
-    if (strcmp(namespace, NS_DIN_MSG_DEF) == 0) {
+    if (strncmp(namespace, NS_DIN_MSG_DEF, sizeof(NS_DIN_MSG_DEF)) == 0) {
         return PROTOCOL_DIN;
     }
-    if (strcmp(namespace, NS_ISO_V2_MSG_DEF) == 0) {
+    if (strncmp(namespace, NS_ISO_V2_MSG_DEF, sizeof(NS_ISO_V2_MSG_DEF)) == 0) {
         return PROTOCOL_ISO2;
     }
-    if (strcmp(namespace, NS_ISO_V20_COMMON_MSG) == 0) {
+    if (strncmp(namespace, NS_ISO_V20_COMMON_MSG, sizeof(NS_ISO_V20_COMMON_MSG)) == 0) {
         return PROTOCOL_ISO20_COMMON;
     }
-    if (strcmp(namespace, NS_ISO_V20_AC) == 0) {
+    if (strncmp(namespace, NS_ISO_V20_AC, sizeof(NS_ISO_V20_AC)) == 0) {
         return PROTOCOL_ISO20_AC;
     }
-    if (strcmp(namespace, NS_ISO_V20_DC) == 0) {
+    if (strncmp(namespace, NS_ISO_V20_DC, sizeof(NS_ISO_V20_DC)) == 0) {
         return PROTOCOL_ISO20_DC;
     }
-    if (strcmp(namespace, NS_ISO_V20_WPT) == 0) {
+    if (strncmp(namespace, NS_ISO_V20_WPT, sizeof(NS_ISO_V20_WPT)) == 0) {
         return PROTOCOL_ISO20_WPT;
     }
-    if (strcmp(namespace, NS_ISO_V20_ACDP) == 0) {
+    if (strncmp(namespace, NS_ISO_V20_ACDP, sizeof(NS_ISO_V20_ACDP)) == 0) {
         return PROTOCOL_ISO20_ACDP;
     }
     /* Check for ISO20 base prefix */
-    if (strncmp(namespace, NS_ISO_V20_BASE, strlen(NS_ISO_V20_BASE)) == 0) {
+    if (strncmp(namespace, NS_ISO_V20_BASE, sizeof(NS_ISO_V20_BASE) - 1) == 0) {
         return PROTOCOL_ISO20_COMMON;
     }
 

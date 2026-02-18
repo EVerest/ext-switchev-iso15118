@@ -192,7 +192,7 @@ static int json_to_apphand_req(cJSON* json, struct appHand_supportedAppProtocolR
 
         /* ProtocolNamespace */
         const char* ns = json_get_string(item, "ProtocolNamespace");
-        size_t ns_len = strlen(ns);
+        size_t ns_len = strnlen(ns, appHand_ProtocolNamespace_CHARACTER_SIZE);
         if (ns_len >= appHand_ProtocolNamespace_CHARACTER_SIZE) {
             ns_len = appHand_ProtocolNamespace_CHARACTER_SIZE - 1;
         }
@@ -220,11 +220,14 @@ static int json_to_apphand_res(cJSON* json, struct appHand_supportedAppProtocolR
 
     /* ResponseCode */
     const char* response_code = json_get_string(json, "ResponseCode");
-    if (strcmp(response_code, "OK_SuccessfulNegotiation") == 0) {
+    if (strncmp(response_code, "OK_SuccessfulNegotiation",
+                sizeof("OK_SuccessfulNegotiation")) == 0) {
         res->ResponseCode = appHand_responseCodeType_OK_SuccessfulNegotiation;
-    } else if (strcmp(response_code, "OK_SuccessfulNegotiationWithMinorDeviation") == 0) {
+    } else if (strncmp(response_code, "OK_SuccessfulNegotiationWithMinorDeviation",
+                       sizeof("OK_SuccessfulNegotiationWithMinorDeviation")) == 0) {
         res->ResponseCode = appHand_responseCodeType_OK_SuccessfulNegotiationWithMinorDeviation;
-    } else if (strcmp(response_code, "Failed_NoNegotiation") == 0) {
+    } else if (strncmp(response_code, "Failed_NoNegotiation",
+                       sizeof("Failed_NoNegotiation")) == 0) {
         res->ResponseCode = appHand_responseCodeType_Failed_NoNegotiation;
     } else {
         /* Try as integer */

@@ -180,7 +180,9 @@ int json_has_key(cJSON* obj, const char* key) {
 size_t json_get_bytes(cJSON* obj, const char* key, uint8_t* output, size_t output_size) {
     cJSON* item = cJSON_GetObjectItemCaseSensitive(obj, key);
     if (item && cJSON_IsString(item)) {
-        return base64_decode(item->valuestring, strlen(item->valuestring), output, output_size);
+        size_t max_b64_len = ((output_size + 2) / 3) * 4;
+        size_t vs_len = strnlen(item->valuestring, max_b64_len);
+        return base64_decode(item->valuestring, vs_len, output, output_size);
     }
     return 0;
 }
