@@ -146,15 +146,13 @@ int apphand_decode(const uint8_t* exi, size_t exi_len, char* out, size_t out_siz
         goto cleanup;
     }
 
-    /* Copy to output buffer */
-    size_t json_len = strlen(json_str);
-    if (json_len >= out_size) {
-        set_error("Output buffer too small: need %zu, have %zu", json_len + 1, out_size);
+    /* Copy to output buffer using snprintf for bounded write */
+    int written = snprintf(out, out_size, "%s", json_str);
+    if (written < 0 || (size_t)written >= out_size) {
+        set_error("Output buffer too small: need %d, have %zu", written + 1, out_size);
         result = CBV2G_ERROR_BUFFER_TOO_SMALL;
         goto cleanup;
     }
-
-    strcpy(out, json_str);
     result = CBV2G_SUCCESS;
 
 cleanup:
@@ -190,15 +188,16 @@ static int json_to_apphand_req(cJSON* json, struct appHand_supportedAppProtocolR
         struct appHand_AppProtocolType* proto = &req->AppProtocol.array[i];
         init_appHand_AppProtocolType(proto);
 
-        /* ProtocolNamespace */
+        /* ProtocolNamespace — snprintf with %.*s is bounded and always null-terminates */
         const char* ns = json_get_string(item, "ProtocolNamespace");
         size_t ns_len = strnlen(ns, appHand_ProtocolNamespace_CHARACTER_SIZE);
-        if (ns_len >= appHand_ProtocolNamespace_CHARACTER_SIZE) {
-            ns_len = appHand_ProtocolNamespace_CHARACTER_SIZE - 1;
-        }
-        strncpy(proto->ProtocolNamespace.characters, ns, ns_len);
-        proto->ProtocolNamespace.characters[ns_len] = '\0';
-        proto->ProtocolNamespace.charactersLen = ns_len;
+        int ns_written = snprintf(proto->ProtocolNamespace.characters,
+                                  appHand_ProtocolNamespace_CHARACTER_SIZE,
+                                  "%.*s", (int)ns_len, ns);
+        if (ns_written < 0) ns_written = 0;
+        if ((size_t)ns_written >= appHand_ProtocolNamespace_CHARACTER_SIZE)
+            ns_written = appHand_ProtocolNamespace_CHARACTER_SIZE - 1;
+        proto->ProtocolNamespace.charactersLen = (size_t)ns_written;
 
         /* Version numbers */
         proto->VersionNumberMajor = json_get_int(item, "VersionNumberMajor");
@@ -272,8 +271,8 @@ static cJSON* apphand_req_to_json(const struct appHand_supportedAppProtocolReq* 
         if (ns_len > appHand_ProtocolNamespace_CHARACTER_SIZE) {
             ns_len = appHand_ProtocolNamespace_CHARACTER_SIZE;
         }
-        memcpy(ns, proto->ProtocolNamespace.characters, ns_len);
-        ns[ns_len] = '\0';
+        snprintf(ns, sizeof(ns), "%.*s", (int)ns_len,
+                 proto->ProtocolNamespace.characters);
 
         cJSON_AddStringToObject(item, "ProtocolNamespace", ns);
         cJSON_AddNumberToObject(item, "VersionNumberMajor", proto->VersionNumberMajor);
