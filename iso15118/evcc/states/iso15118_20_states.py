@@ -1715,11 +1715,11 @@ class DCPreCharge(StateEVCC):
             next_request = await self.build_pre_charge_message(is_precharged)
 
             self.create_next_message(
-                DCPreCharge,
+                None,
                 next_request,
                 Timeouts.DC_PRE_CHARGE_REQ,
                 Namespace.ISO_V20_DC,
-                ISOV20PayloadTypes.MAINSTREAM,
+                ISOV20PayloadTypes.DC_MAINSTREAM,
             )
 
     async def build_power_delivery_req(self):
