@@ -64,7 +64,7 @@ usage() {
     You need to provide the ISO 15118 version with the '-v' flag, choosing between the
     two admissible options stated above.
 
-    This script uses by default a password value of 12345, which can be modified
+    This script uses by default a password value of 123456, which can be modified
     if -p option is used as exemplified above.
 
     NOTE: This script will create the following folder structure, if not already
