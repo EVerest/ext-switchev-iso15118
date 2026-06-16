@@ -133,6 +133,10 @@ class EVCCCommunicationSession(V2GCommunicationSession):
         # That value is needed across states (ScheduleExchange and PowerDelivery)
         # (ISO 15118-20)
         self.ev_processing: Processing = Processing.FINISHED
+        # Whether the EVCC has sent a DCPreChargeReq with EVProcessing=Finished.
+        # The EVCC must not advance to PowerDeliveryReq until the SECC has
+        # answered that final DCPreChargeReq.
+        self.dc_precharge_finished_req_sent = False
         # Temporarily save the ScheduleExchangeRes, in case the EVProcessing field of
         # PowerDeliveryReq is set to "Ongoing", so we can access that response in the
         # following PowerDelivery state (ISO 15118-20)
