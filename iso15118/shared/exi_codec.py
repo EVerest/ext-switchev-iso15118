@@ -10,6 +10,7 @@ from iso15118.shared.exceptions import (
     EXIEncodingError,
     V2GMessageValidationError,
 )
+from iso15118.shared.cbv2g_exi_codec import Cbv2gEXICodec
 from iso15118.shared.exificient_exi_codec import ExificientEXICodec
 from iso15118.shared.iexi_codec import IEXICodec
 from iso15118.shared.messages import BaseModel
@@ -182,7 +183,15 @@ class EXI:
         If exi_codec is not specified return an instance of the default codec Exificient
         """
         if self.exi_codec is None:
-            self.exi_codec = ExificientEXICodec()
+            try:
+                self.exi_codec = Cbv2gEXICodec()
+                logger.info("Using native Cbv2gEXICodec (no Java required)")
+            except Exception as native_err:
+                logger.warning(
+                    "Native Cbv2gEXICodec unavailable (%s); "
+                    "falling back to ExificientEXICodec", native_err,
+                )
+                self.exi_codec = ExificientEXICodec()
         return self.exi_codec
 
     def to_exi(self, msg_element: BaseModel, protocol_ns: str) -> bytes:
