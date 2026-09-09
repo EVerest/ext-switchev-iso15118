@@ -15,6 +15,9 @@ class Context:
         self._pub_callback = callback
 
     def publish(self, variable_name: str, value: any):
+        # Josev running standalone registers no callback.
+        if self._pub_callback is None:
+            return
         self._pub_callback(variable_name, value)
 
     @property

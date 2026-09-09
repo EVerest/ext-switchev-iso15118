@@ -8,6 +8,7 @@ receiving, and processing messages during an ISO 15118 communication session.
 import asyncio
 import gc
 import logging
+from functools import lru_cache
 from abc import ABC, abstractmethod
 from asyncio.streams import StreamReader, StreamWriter
 from typing import List, Optional, Tuple, Type, Union
@@ -223,9 +224,11 @@ class SessionStateMachine(ABC):
             )
             raise exc
 
-        if self.comm_session.__class__.__name__ == "SECCCommunicationSession":
-            debugV2GMessages(decoded_message=decoded_message,
-                             v2gtp_msg=v2gtp_msg)
+        debugV2GMessages(
+            decoded_message=decoded_message,
+            v2gtp_msg=v2gtp_msg,
+            comm_session=self.comm_session,
+        )
 
         # Shouldn't happen, but just to be sure (otherwise mypy would complain)
         if not decoded_message:
@@ -508,9 +511,11 @@ class V2GCommunicationSession(SessionStateMachine):
                     # Terminate or Pause on the EVCC side
                     await self.send(self.current_state.next_v2gtp_msg)
                     await self._update_state_info(self.current_state)
-                    if self.comm_session.__class__.__name__ == "SECCCommunicationSession":
-                        debugV2GMessages(decoded_message=self.current_state.message,
-                                         v2gtp_msg=self.current_state.next_v2gtp_msg)
+                    debugV2GMessages(
+                        decoded_message=self.current_state.message,
+                        v2gtp_msg=self.current_state.next_v2gtp_msg,
+                        comm_session=self.comm_session,
+                    )
 
                 if self.current_state.next_state in (Terminate, Pause):
                     await self.stop(reason=self.comm_session.stop_reason.reason)
@@ -561,42 +566,188 @@ class V2GCommunicationSession(SessionStateMachine):
                 if gc_enabled:
                     gc.enable()
 
-def debugV2GMessages(decoded_message, v2gtp_msg):
-    from iso15118.secc.everest import context as EVEREST_CTX
-    import json
-    from iso15118.shared.exi_codec import CustomJSONEncoder
-    import base64
+
+def _v2g_message_id(decoded_message) -> str:
+    """
+    Name of the V2G message as the protocol spells it, or "" if it has none.
+
+    Cheap by construction: a field scan and a type lookup. It touches neither
+    the pydantic model dict, the JSON encoder nor the EXI payload, so it can be
+    resolved for every message.
+    """
+    if isinstance(decoded_message, (V2GMessageV2, V2GMessageDINSPEC, V2GMessageV20)):
+        return str(decoded_message)
+    if isinstance(decoded_message, (SupportedAppProtocolReq, SupportedAppProtocolRes)):
+        # Their __str__ lowercases the first letter; the class name is the id.
+        return type(decoded_message).__name__
+    return ""
+
+
+# everest's V2gMessageId is a CLOSED enum: a string it does not contain makes
+# the consumer's generated deserializer raise std::out_of_range and terminate
+# the module, so nothing is published without being checked against this set.
+# Resync from a checkout of EVerest/everest-core with:
+#
+#   python3 -c "import yaml;print('\n'.join(yaml.safe_load(open(
+#     'types/iso15118.yaml'))['types']['V2gMessageId']['enum']))"
+_EVEREST_KNOWN_IDS = {
+    "SupportedAppProtocolReq",
+    "SupportedAppProtocolRes",
+    "SessionSetupReq",
+    "SessionSetupRes",
+    "ServiceDiscoveryReq",
+    "ServiceDiscoveryRes",
+    "ServiceDetailReq",
+    "ServiceDetailRes",
+    "PaymentServiceSelectionReq",
+    "PaymentServiceSelectionRes",
+    "ServicePaymentSelectionReq",
+    "ServicePaymentSelectionRes",
+    "PaymentDetailsReq",
+    "PaymentDetailsRes",
+    "AuthorizationReq",
+    "AuthorizationRes",
+    "ContractAuthenticationReq",
+    "ContractAuthenticationRes",
+    "ChargeParameterDiscoveryReq",
+    "ChargeParameterDiscoveryRes",
+    "ChargingStatusReq",
+    "ChargingStatusRes",
+    "MeteringReceiptReq",
+    "MeteringReceiptRes",
+    "PowerDeliveryReq",
+    "PowerDeliveryRes",
+    "CableCheckReq",
+    "CableCheckRes",
+    "PreChargeReq",
+    "PreChargeRes",
+    "CurrentDemandReq",
+    "CurrentDemandRes",
+    "WeldingDetectionReq",
+    "WeldingDetectionRes",
+    "SessionStopReq",
+    "SessionStopRes",
+    "CertificateInstallationReq",
+    "CertificateInstallationRes",
+    "CertificateUpdateReq",
+    "CertificateUpdateRes",
+    "AuthorizationSetupReq",
+    "AuthorizationSetupRes",
+    "ScheduleExchangeReq",
+    "ScheduleExchangeRes",
+    "ServiceSelectionReq",
+    "ServiceSelectionRes",
+    "AcChargeLoopReq",
+    "AcChargeLoopRes",
+    "AcChargeParameterDiscoveryReq",
+    "AcChargeParameterDiscoveryRes",
+    "AcDerChargeParameterDiscoveryReq",
+    "AcDerChargeParameterDiscoveryRes",
+    "AcDerChargeLoopReq",
+    "AcDerChargeLoopRes",
+    "AcDerSaeChargeParameterDiscoveryReq",
+    "AcDerSaeChargeParameterDiscoveryRes",
+    "AcDerSaeChargeLoopReq",
+    "AcDerSaeChargeLoopRes",
+    "DcCableCheckReq",
+    "DcCableCheckRes",
+    "DcChargeLoopReq",
+    "DcChargeLoopRes",
+    "DcChargeParameterDiscoveryReq",
+    "DcChargeParameterDiscoveryRes",
+    "DcPreChargeReq",
+    "DcPreChargeRes",
+    "DcWeldingDetectionReq",
+    "DcWeldingDetectionRes",
+    "UnknownMessage",
+}
+
+_EVEREST_UNKNOWN_ID = "UnknownMessage"
+
+# ISO 15118-20 keeps the XSD spelling of the energy-transfer-mode prefix
+# ("DC_ChargeLoopReq") while everest spells it CamelCase ("DcChargeLoopReq").
+# -2 and DIN need no normalization. A prefix rule rather than a per-message
+# table, so a message added upstream is normalized too.
+_EVEREST_XSD_PREFIXES = (("AC_", "Ac"), ("DC_", "Dc"))
+
+@lru_cache(maxsize=None)
+def _warn_unmapped_id(raw: str, candidate: str) -> None:
+    """Once per distinct id, not once per exchange. Cached for that alone."""
+    logger.warning(
+        f"V2G message id {raw!r} (normalized {candidate!r}) is not in the "
+        f"everest V2gMessageId enum; reporting it as "
+        f"{_EVEREST_UNKNOWN_ID!r}. The enum needs this name added."
+    )
+
+
+def _everest_v2g_message_id(decoded_message) -> str:
+    """
+    The message id spelled as everest's closed V2gMessageId enum expects it.
+
+    "" when there is no id at all, "UnknownMessage" when everest would not
+    accept the one there is. Never returns a string that makes it throw.
+    """
+    raw = _v2g_message_id(decoded_message)
+    if not raw:
+        return ""
+
+    candidate = raw
+    for prefix, replacement in _EVEREST_XSD_PREFIXES:
+        if candidate.startswith(prefix):
+            candidate = replacement + candidate[len(prefix) :]
+            break
+
+    if candidate in _EVEREST_KNOWN_IDS:
+        return candidate
+
+    _warn_unmapped_id(raw, candidate)
+    return _EVEREST_UNKNOWN_ID
+
+
+def debugV2GMessages(decoded_message, v2gtp_msg, comm_session):
+    """
+    Report the V2G message that was just sent or received.
+
+    On the send path this runs after the message has gone out, so a consumer
+    sees that the message is on the wire. The EVCC and SECC everest contexts
+    live in separate packages, so the side is resolved from the session class
+    before either is imported.
+    """
     from iso15118.shared.states import Base64
 
-    if EVEREST_CTX.charger_state.debug_mode:
+    if isinstance(decoded_message, Base64):
+        return
 
-        if isinstance(decoded_message, Base64):
-            return
+    if comm_session.__class__.__name__ == "EVCCCommunicationSession":
+        from iso15118.evcc.everest import context as evcc_ctx
+
+        everest_id = _everest_v2g_message_id(decoded_message)
+        if everest_id:
+            evcc_ctx.publish("v2g_messages", {"id": everest_id})
+        return
+
+    from iso15118.secc.everest import context as secc_ctx
+
+    message_id = _v2g_message_id(decoded_message)
+
+    if secc_ctx.charger_state.debug_mode:
+        import base64
+        import json
+
+        from iso15118.shared.exi_codec import CustomJSONEncoder
 
         msg_to_dct: dict = decoded_message.dict(by_alias=True, exclude_none=True)
-        if isinstance(decoded_message, V2GMessageV2) or isinstance(
-            decoded_message, V2GMessageDINSPEC
-        ):
+        if isinstance(decoded_message, (V2GMessageV2, V2GMessageDINSPEC)):
             message_dict = {"V2G_Message": msg_to_dct}
         else:
             message_dict = {str(decoded_message): msg_to_dct}
-        msg_content = json.dumps(message_dict, cls=CustomJSONEncoder)
 
-        classname: str = ""
-        if isinstance(decoded_message, V2GMessageV2) or isinstance(
-            decoded_message, V2GMessageDINSPEC
-        ):
-            classname = decoded_message.__str__()
-        elif isinstance(decoded_message, SupportedAppProtocolReq):
-            classname = "SupportedAppProtocolReq"
-        elif isinstance(decoded_message, SupportedAppProtocolRes):
-            classname = "SupportedAppProtocolRes"
-
-        v2gmessages: dict = dict([
-            ("V2G_Message_ID", classname),
-            ("V2G_Message_JSON", msg_content),
-            ("V2G_Message_EXI_Hex",v2gtp_msg.payload.hex()),
-            ("V2G_Message_EXI_Base64", base64.b64encode(v2gtp_msg.payload).hex())
-        ])
-
-        EVEREST_CTX.publish('V2G_Messages', v2gmessages)
+        secc_ctx.publish(
+            "V2G_Messages",
+            {
+                "V2G_Message_ID": message_id,
+                "V2G_Message_JSON": json.dumps(message_dict, cls=CustomJSONEncoder),
+                "V2G_Message_EXI_Hex": v2gtp_msg.payload.hex(),
+                "V2G_Message_EXI_Base64": base64.b64encode(v2gtp_msg.payload).hex(),
+            },
+        )
