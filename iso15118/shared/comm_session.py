@@ -223,9 +223,11 @@ class SessionStateMachine(ABC):
             )
             raise exc
 
-        if self.comm_session.__class__.__name__ == "SECCCommunicationSession":
-            debugV2GMessages(decoded_message=decoded_message,
-                             v2gtp_msg=v2gtp_msg)
+        debugV2GMessages(
+            decoded_message=decoded_message,
+            v2gtp_msg=v2gtp_msg,
+            comm_session=self.comm_session,
+        )
 
         # Shouldn't happen, but just to be sure (otherwise mypy would complain)
         if not decoded_message:
@@ -508,9 +510,11 @@ class V2GCommunicationSession(SessionStateMachine):
                     # Terminate or Pause on the EVCC side
                     await self.send(self.current_state.next_v2gtp_msg)
                     await self._update_state_info(self.current_state)
-                    if self.comm_session.__class__.__name__ == "SECCCommunicationSession":
-                        debugV2GMessages(decoded_message=self.current_state.message,
-                                         v2gtp_msg=self.current_state.next_v2gtp_msg)
+                    debugV2GMessages(
+                        decoded_message=self.current_state.message,
+                        v2gtp_msg=self.current_state.next_v2gtp_msg,
+                        comm_session=self.comm_session,
+                    )
 
                 if self.current_state.next_state in (Terminate, Pause):
                     await self.stop(reason=self.comm_session.stop_reason.reason)
@@ -561,42 +565,66 @@ class V2GCommunicationSession(SessionStateMachine):
                 if gc_enabled:
                     gc.enable()
 
-def debugV2GMessages(decoded_message, v2gtp_msg):
-    from iso15118.secc.everest import context as EVEREST_CTX
-    import json
-    from iso15118.shared.exi_codec import CustomJSONEncoder
-    import base64
+
+def _v2g_message_id(decoded_message) -> str:
+    """
+    Name of the V2G message as the protocol spells it, or "" if it has none.
+
+    Cheap by construction: a field scan and a type lookup. It touches neither
+    the pydantic model dict, the JSON encoder nor the EXI payload, so it can be
+    resolved for every message.
+    """
+    if isinstance(decoded_message, (V2GMessageV2, V2GMessageDINSPEC, V2GMessageV20)):
+        return str(decoded_message)
+    if isinstance(decoded_message, (SupportedAppProtocolReq, SupportedAppProtocolRes)):
+        # Their __str__ lowercases the first letter; the class name is the id.
+        return type(decoded_message).__name__
+    return ""
+
+
+def debugV2GMessages(decoded_message, v2gtp_msg, comm_session):
+    """
+    Report the V2G message that was just sent or received.
+
+    On the send path this runs after the message has gone out, so a consumer
+    sees that the message is on the wire. The EVCC and SECC everest contexts
+    live in separate packages, so the side is resolved from the session class
+    before either is imported.
+    """
     from iso15118.shared.states import Base64
 
-    if EVEREST_CTX.charger_state.debug_mode:
+    if isinstance(decoded_message, Base64):
+        return
 
-        if isinstance(decoded_message, Base64):
-            return
+    message_id = _v2g_message_id(decoded_message)
+
+    if comm_session.__class__.__name__ == "EVCCCommunicationSession":
+        from iso15118.evcc.everest import context as evcc_ctx
+
+        if message_id:
+            evcc_ctx.publish("v2g_messages", {"id": message_id})
+        return
+
+    from iso15118.secc.everest import context as secc_ctx
+
+    if secc_ctx.charger_state.debug_mode:
+        import base64
+        import json
+
+        from iso15118.shared.exi_codec import CustomJSONEncoder
 
         msg_to_dct: dict = decoded_message.dict(by_alias=True, exclude_none=True)
-        if isinstance(decoded_message, V2GMessageV2) or isinstance(
-            decoded_message, V2GMessageDINSPEC
-        ):
+        if isinstance(decoded_message, (V2GMessageV2, V2GMessageDINSPEC)):
             message_dict = {"V2G_Message": msg_to_dct}
         else:
             message_dict = {str(decoded_message): msg_to_dct}
-        msg_content = json.dumps(message_dict, cls=CustomJSONEncoder)
 
-        classname: str = ""
-        if isinstance(decoded_message, V2GMessageV2) or isinstance(
-            decoded_message, V2GMessageDINSPEC
-        ):
-            classname = decoded_message.__str__()
-        elif isinstance(decoded_message, SupportedAppProtocolReq):
-            classname = "SupportedAppProtocolReq"
-        elif isinstance(decoded_message, SupportedAppProtocolRes):
-            classname = "SupportedAppProtocolRes"
-
-        v2gmessages: dict = dict([
-            ("V2G_Message_ID", classname),
-            ("V2G_Message_JSON", msg_content),
-            ("V2G_Message_EXI_Hex",v2gtp_msg.payload.hex()),
-            ("V2G_Message_EXI_Base64", base64.b64encode(v2gtp_msg.payload).hex())
-        ])
-
-        EVEREST_CTX.publish('V2G_Messages', v2gmessages)
+        secc_ctx.publish(
+            "V2G_Messages",
+            {
+                "V2G_Message_ID": message_id,
+                "V2G_Message_JSON": json.dumps(message_dict, cls=CustomJSONEncoder),
+                "V2G_Message_EXI_Hex": v2gtp_msg.payload.hex(),
+                "V2G_Message_EXI_Base64": base64.b64encode(v2gtp_msg.payload).hex(),
+            },
+        )
