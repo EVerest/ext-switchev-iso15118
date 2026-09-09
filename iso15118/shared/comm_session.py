@@ -8,6 +8,7 @@ receiving, and processing messages during an ISO 15118 communication session.
 import asyncio
 import gc
 import logging
+from functools import lru_cache
 from abc import ABC, abstractmethod
 from asyncio.streams import StreamReader, StreamWriter
 from typing import List, Optional, Tuple, Type, Union
@@ -582,6 +583,127 @@ def _v2g_message_id(decoded_message) -> str:
     return ""
 
 
+# everest's V2gMessageId is a CLOSED enum: a string it does not contain makes
+# the consumer's generated deserializer raise std::out_of_range and terminate
+# the module, so nothing is published without being checked against this set.
+# Resync from a checkout of EVerest/everest-core with:
+#
+#   python3 -c "import yaml;print('\n'.join(yaml.safe_load(open(
+#     'types/iso15118.yaml'))['types']['V2gMessageId']['enum']))"
+_EVEREST_KNOWN_IDS = {
+    "SupportedAppProtocolReq",
+    "SupportedAppProtocolRes",
+    "SessionSetupReq",
+    "SessionSetupRes",
+    "ServiceDiscoveryReq",
+    "ServiceDiscoveryRes",
+    "ServiceDetailReq",
+    "ServiceDetailRes",
+    "PaymentServiceSelectionReq",
+    "PaymentServiceSelectionRes",
+    "ServicePaymentSelectionReq",
+    "ServicePaymentSelectionRes",
+    "PaymentDetailsReq",
+    "PaymentDetailsRes",
+    "AuthorizationReq",
+    "AuthorizationRes",
+    "ContractAuthenticationReq",
+    "ContractAuthenticationRes",
+    "ChargeParameterDiscoveryReq",
+    "ChargeParameterDiscoveryRes",
+    "ChargingStatusReq",
+    "ChargingStatusRes",
+    "MeteringReceiptReq",
+    "MeteringReceiptRes",
+    "PowerDeliveryReq",
+    "PowerDeliveryRes",
+    "CableCheckReq",
+    "CableCheckRes",
+    "PreChargeReq",
+    "PreChargeRes",
+    "CurrentDemandReq",
+    "CurrentDemandRes",
+    "WeldingDetectionReq",
+    "WeldingDetectionRes",
+    "SessionStopReq",
+    "SessionStopRes",
+    "CertificateInstallationReq",
+    "CertificateInstallationRes",
+    "CertificateUpdateReq",
+    "CertificateUpdateRes",
+    "AuthorizationSetupReq",
+    "AuthorizationSetupRes",
+    "ScheduleExchangeReq",
+    "ScheduleExchangeRes",
+    "ServiceSelectionReq",
+    "ServiceSelectionRes",
+    "AcChargeLoopReq",
+    "AcChargeLoopRes",
+    "AcChargeParameterDiscoveryReq",
+    "AcChargeParameterDiscoveryRes",
+    "AcDerChargeParameterDiscoveryReq",
+    "AcDerChargeParameterDiscoveryRes",
+    "AcDerChargeLoopReq",
+    "AcDerChargeLoopRes",
+    "AcDerSaeChargeParameterDiscoveryReq",
+    "AcDerSaeChargeParameterDiscoveryRes",
+    "AcDerSaeChargeLoopReq",
+    "AcDerSaeChargeLoopRes",
+    "DcCableCheckReq",
+    "DcCableCheckRes",
+    "DcChargeLoopReq",
+    "DcChargeLoopRes",
+    "DcChargeParameterDiscoveryReq",
+    "DcChargeParameterDiscoveryRes",
+    "DcPreChargeReq",
+    "DcPreChargeRes",
+    "DcWeldingDetectionReq",
+    "DcWeldingDetectionRes",
+    "UnknownMessage",
+}
+
+_EVEREST_UNKNOWN_ID = "UnknownMessage"
+
+# ISO 15118-20 keeps the XSD spelling of the energy-transfer-mode prefix
+# ("DC_ChargeLoopReq") while everest spells it CamelCase ("DcChargeLoopReq").
+# -2 and DIN need no normalization. A prefix rule rather than a per-message
+# table, so a message added upstream is normalized too.
+_EVEREST_XSD_PREFIXES = (("AC_", "Ac"), ("DC_", "Dc"))
+
+@lru_cache(maxsize=None)
+def _warn_unmapped_id(raw: str, candidate: str) -> None:
+    """Once per distinct id, not once per exchange. Cached for that alone."""
+    logger.warning(
+        f"V2G message id {raw!r} (normalized {candidate!r}) is not in the "
+        f"everest V2gMessageId enum; reporting it as "
+        f"{_EVEREST_UNKNOWN_ID!r}. The enum needs this name added."
+    )
+
+
+def _everest_v2g_message_id(decoded_message) -> str:
+    """
+    The message id spelled as everest's closed V2gMessageId enum expects it.
+
+    "" when there is no id at all, "UnknownMessage" when everest would not
+    accept the one there is. Never returns a string that makes it throw.
+    """
+    raw = _v2g_message_id(decoded_message)
+    if not raw:
+        return ""
+
+    candidate = raw
+    for prefix, replacement in _EVEREST_XSD_PREFIXES:
+        if candidate.startswith(prefix):
+            candidate = replacement + candidate[len(prefix) :]
+            break
+
+    if candidate in _EVEREST_KNOWN_IDS:
+        return candidate
+
+    _warn_unmapped_id(raw, candidate)
+    return _EVEREST_UNKNOWN_ID
+
+
 def debugV2GMessages(decoded_message, v2gtp_msg, comm_session):
     """
     Report the V2G message that was just sent or received.
@@ -596,16 +718,17 @@ def debugV2GMessages(decoded_message, v2gtp_msg, comm_session):
     if isinstance(decoded_message, Base64):
         return
 
-    message_id = _v2g_message_id(decoded_message)
-
     if comm_session.__class__.__name__ == "EVCCCommunicationSession":
         from iso15118.evcc.everest import context as evcc_ctx
 
-        if message_id:
-            evcc_ctx.publish("v2g_messages", {"id": message_id})
+        everest_id = _everest_v2g_message_id(decoded_message)
+        if everest_id:
+            evcc_ctx.publish("v2g_messages", {"id": everest_id})
         return
 
     from iso15118.secc.everest import context as secc_ctx
+
+    message_id = _v2g_message_id(decoded_message)
 
     if secc_ctx.charger_state.debug_mode:
         import base64
