@@ -1607,6 +1607,7 @@ class DCCableCheck(StateEVCC):
         if cable_check_res.evse_processing == Processing.FINISHED:
             # Reset the Ongoing timer
             self.comm_session.ongoing_timer = -1
+            self.comm_session.dc_precharge_finished_req_sent = False
             precharge_req = await self.build_pre_charge_message()
             self.create_next_message(
                 DCPreCharge,
@@ -1641,12 +1642,8 @@ class DCCableCheck(StateEVCC):
 
     async def build_pre_charge_message(self):
         present_voltage = await self.comm_session.ev_controller.get_present_voltage()
-        is_precharged = await self.comm_session.ev_controller.is_precharged(
-            RationalNumber(exponent=0, value=0)
-        )
         processing = Processing.ONGOING
-        if is_precharged:
-            processing = Processing.FINISHED
+        self.comm_session.dc_precharge_finished_req_sent = False
         dc_pre_charge_req = DCPreChargeReq(
             header=MessageHeader(
                 session_id=self.comm_session.session_id,
@@ -1667,7 +1664,6 @@ class DCPreCharge(StateEVCC):
 
     def __init__(self, comm_session: EVCCCommunicationSession):
         super().__init__(comm_session, Timeouts.DC_PRE_CHARGE_REQ)
-        self.precharge_finished = False
 
     async def process_message(
         self,
@@ -1689,7 +1685,7 @@ class DCPreCharge(StateEVCC):
         ev_controller = self.comm_session.ev_controller
         is_precharged = await ev_controller.is_precharged(precharge_res.evse_present_voltage)
 
-        if is_precharged and self.precharge_finished:
+        if is_precharged and self.comm_session.dc_precharge_finished_req_sent:
             self.comm_session.ongoing_timer = -1
             next_request = await self.build_power_delivery_req()
 
@@ -1775,7 +1771,9 @@ class DCPreCharge(StateEVCC):
         processing = Processing.ONGOING
         if is_precharged:
             processing = Processing.FINISHED
-            self.precharge_finished = True
+        self.comm_session.dc_precharge_finished_req_sent = (
+            processing == Processing.FINISHED
+        )
         dc_pre_charge_req = DCPreChargeReq(
             header=MessageHeader(
                 session_id=self.comm_session.session_id,
